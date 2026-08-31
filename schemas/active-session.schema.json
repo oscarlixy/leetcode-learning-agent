@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "active",
+    "session_id",
+    "started_at",
+    "topic_id",
+    "problem_slug",
+    "phase",
+    "hint_level",
+    "last_updated_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "active": {
+      "type": "boolean"
+    },
+    "session_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "started_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "topic_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "problem_slug": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "phase": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "recall",
+        "concept",
+        "solve",
+        "review",
+        "complete",
+        null
+      ]
+    },
+    "hint_level": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 5
+    },
+    "last_updated_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

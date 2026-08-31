@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "current_topic_id": "diagnosis",
+  "updated_at": "2026-08-31T00:00:00+08:00",
+  "topics": {
+    "diagnosis": {
+      "mastery": 0,
+      "status": "unseen",
+      "last_studied_at": null,
+      "next_review_at": null,
+      "sessions_completed": 0,
+      "best_independent_result": false,
+      "highest_hint_level_used": 0,
+      "error_tags": []
+    },
+    "complexity": {
+      "mastery": 0,
+      "status": "unseen",
+      "last_studied_at": null,
+      "next_review_at": null,
+      "sessions_completed": 0,
+      "best_independent_result": false,
+      "highest_hint_level_used": 0,
+      "error_tags": []
+    },
+    "cpp-toolbox": {
+      "mastery": 0,
+      "status": "unseen",
+      "last_studied_at": null,
+      "next_review_at": null,
+      "sessions_completed": 0,
+      "best_independent_result": false,
+      "highest_hint_level_used": 0,
+      "error_tags": []
+    },
+    "arrays-strings": {
+      "mastery": 0,
+      "status": "unseen",
+      "last_studied_at": null,
+      "next_review_at": null,
+      "sessions_completed": 0,
+      "best_independent_result": false,
+      "highest_hint_level_used": 0,
+      "error_tags": []
+    },
+    "linked-list": {
+      "mastery": 0,
+      "status": "unseen",
+      "last_studied_at": null,
+      "next_review_at": null,
+      "sessions_completed": 0,
+      "best_independent_result": false,
+      "highest_hint_level_used": 0,
+      "error_tags": []
+    },
+    "stack-queue": {
+      "mastery": 0,
+      "status": "unseen",
+      "last_studied_at": null,
+      "next_review_at": null,
+      "sessions_completed": 0,
+      "best_independent_result": false,
+      "highest_hint_level_used": 0,
+      "error_tags": []
+    },
+    "hash-table": {
+      "mastery": 0,
+      "status": "unseen",
+      "last_studied_at": null,
+      "next_review_at": null,
+      "sessions_completed": 0,
+      "best_independent_result": false,
+      "highest_hint_level_used": 0,
+      "error_tags": []
+    },
+    "sorting-binary-search": {
+      "mastery": 0,
+      "status": "unseen",
+      "last_studied_at": null,
+      "next_review_at": null,
+      "sessions_completed": 0,
+      "best_independent_result": false,
+      "highest_hint_level_used": 0,
+      "error_tags": []
+    },
+    "recursion-backtracking": {
+      "mastery": 0,
+      "status": "unseen",
+      "last_studied_at": null,
+      "next_review_at": null,
+      "sessions_completed": 0,
+      "best_independent_result": false,
+      "highest_hint_level_used": 0,
+      "error_tags": []
+    },
+    "binary-tree": {
+      "mastery": 0,
+      "status": "unseen",
+      "last_studied_at": null,
+      "next_review_at": null,
+      "sessions_completed": 0,
+      "best_independent_result": false,
+      "highest_hint_level_used": 0,
+      "error_tags": []
+    },
+    "heap-priority-queue": {
+      "mastery": 0,
+      "status": "unseen",
+      "last_studied_at": null,
+      "next_review_at": null,
+      "sessions_completed": 0,
+      "best_independent_result": false,
+      "highest_hint_level_used": 0,
+      "error_tags": []
+    },
+    "bfs-dfs": {
+      "mastery": 0,
+      "status": "unseen",
+      "last_studied_at": null,
+      "next_review_at": null,
+      "sessions_completed": 0,
+      "best_independent_result": false,
+      "highest_hint_level_used": 0,
+      "error_tags": []
+    },
+    "graph": {
+      "mastery": 0,
+      "status": "unseen",
+      "last_studied_at": null,
+      "next_review_at": null,
+      "sessions_completed": 0,
+      "best_independent_result": false,
+      "highest_hint_level_used": 0,
+      "error_tags": []
+    },
+    "greedy": {
+      "mastery": 0,
+      "status": "unseen",
+      "last_studied_at": null,
+      "next_review_at": null,
+      "sessions_completed": 0,
+      "best_independent_result": false,
+      "highest_hint_level_used": 0,
+      "error_tags": []
+    },
+    "dynamic-programming": {
+      "mastery": 0,
+      "status": "unseen",
+      "last_studied_at": null,
+      "next_review_at": null,
+      "sessions_completed": 0,
+      "best_independent_result": false,
+      "highest_hint_level_used": 0,
+      "error_tags": []
+    }
+  }
+}

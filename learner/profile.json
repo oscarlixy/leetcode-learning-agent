@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "language": "cpp",
+  "language_standard": "c++20",
+  "objective": "foundations",
+  "session_minutes": 40,
+  "teaching_mode": "socratic",
+  "hint_policy": "progressive-five-level",
+  "problem_source_mode": "hybrid",
+  "timezone": "Asia/Hong_Kong"
+}

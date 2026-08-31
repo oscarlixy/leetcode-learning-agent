@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "nodes"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title",
+          "stage",
+          "objectives",
+          "completion_criteria",
+          "prerequisites",
+          "recommended_problems"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "stage": {
+            "enum": [
+              "foundation",
+              "linear-structures",
+              "sorting-recursion-trees",
+              "graph-composite-search"
+            ]
+          },
+          "objectives": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "completion_criteria": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "prerequisites": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+            }
+          },
+          "recommended_problems": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^(?:local|[0-9]+):[a-z0-9]+(?:-[a-z0-9]+)*$"
+            }
+          }
+        }
+      }
+    }
+  }
+}

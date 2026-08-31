@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source",
+    "problem_id",
+    "slug",
+    "title",
+    "url",
+    "difficulty",
+    "primary_topic_id",
+    "secondary_topic_ids",
+    "status",
+    "attempt_count",
+    "highest_hint_level_used",
+    "created_at",
+    "last_attempted_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "source": {
+      "enum": [
+        "leetcode",
+        "local"
+      ]
+    },
+    "problem_id": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "url": {
+      "type": "string",
+      "minLength": 1
+    },
+    "difficulty": {
+      "enum": [
+        "easy",
+        "medium",
+        "hard",
+        "unknown"
+      ]
+    },
+    "primary_topic_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "secondary_topic_ids": {
+      "type": "array",
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      }
+    },
+    "status": {
+      "enum": [
+        "new",
+        "attempting",
+        "solved",
+        "review"
+      ]
+    },
+    "attempt_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "highest_hint_level_used": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "last_attempted_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

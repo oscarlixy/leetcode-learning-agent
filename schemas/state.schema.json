@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "current_topic_id",
+    "updated_at",
+    "topics"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "current_topic_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "updated_at": {
+      "type": "string"
+    },
+    "topics": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z0-9]+(?:-[a-z0-9]+)*$": {
+          "$ref": "#/$defs/topicState"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "topicState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mastery",
+        "status",
+        "last_studied_at",
+        "next_review_at",
+        "sessions_completed",
+        "best_independent_result",
+        "highest_hint_level_used",
+        "error_tags"
+      ],
+      "properties": {
+        "mastery": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "status": {
+          "enum": [
+            "unseen",
+            "learning",
+            "review",
+            "mastered"
+          ]
+        },
+        "last_studied_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "next_review_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sessions_completed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "best_independent_result": {
+          "type": "boolean"
+        },
+        "highest_hint_level_used": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "error_tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}
