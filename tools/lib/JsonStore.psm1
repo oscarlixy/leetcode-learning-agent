@@ -33,7 +33,6 @@ function Write-JsonAtomic {
 
     $tempFileName = [System.IO.Path]::GetFileName($destinationPath) + '.' + [System.Guid]::NewGuid().ToString('N') + '.tmp'
     $tempPath = Join-Path $directoryPath $tempFileName
-    $transientBackupPath = $null
 
     try {
         $json = $Value | ConvertTo-Json -Depth 100
@@ -44,8 +43,7 @@ function Write-JsonAtomic {
 
         if (Test-Path -LiteralPath $destinationPath) {
             if ($null -eq $resolvedBackupPath) {
-                $transientBackupPath = Join-Path $directoryPath ([System.IO.Path]::GetFileName($destinationPath) + '.' + [System.Guid]::NewGuid().ToString('N') + '.bak')
-                [System.IO.File]::Replace($tempPath, $destinationPath, $transientBackupPath, $true)
+                [System.IO.File]::Move($tempPath, $destinationPath, $true)
             } else {
                 [System.IO.File]::Replace($tempPath, $destinationPath, $resolvedBackupPath, $true)
             }
@@ -56,9 +54,6 @@ function Write-JsonAtomic {
     finally {
         if (Test-Path -LiteralPath $tempPath) {
             Remove-Item -LiteralPath $tempPath -Force
-        }
-        if ($null -ne $transientBackupPath -and (Test-Path -LiteralPath $transientBackupPath)) {
-            Remove-Item -LiteralPath $transientBackupPath -Force
         }
     }
 }

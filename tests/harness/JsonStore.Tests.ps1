@@ -20,6 +20,19 @@ function New-TestRepositoryFixture {
     return $resolvedFixtureRoot
 }
 
+function Get-WriteJsonAtomicCommandAsts {
+    $scriptBlock = (Get-Command Write-JsonAtomic -CommandType Function).ScriptBlock
+    return @(
+        $scriptBlock.Ast.FindAll(
+            {
+                param($Node)
+                $Node -is [System.Management.Automation.Language.CommandAst]
+            },
+            $true
+        )
+    )
+}
+
 $testRoot = New-TestRepositoryFixture
 try {
     $statePath = Join-Path $testRoot 'learner/state.json'
@@ -58,16 +71,43 @@ try {
     $activeCandidate.last_updated_at = '2026-08-31T12:05:00+08:00'
     $activeCandidate | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $activeCandidatePath -Encoding utf8
 
+    $activeBefore = Get-Content -LiteralPath $activeSessionPath -Raw
     Save-LearnerDocument -Kind active-session -CandidatePath $activeCandidatePath -RepoRoot $testRoot
+
+    Assert-True ($activeBefore -ne (Get-Content -LiteralPath $activeSessionPath -Raw)) 'Active session file did not change.'
     $savedActiveSession = Read-JsonDocument $activeSessionPath
     Assert-True $savedActiveSession.active 'Active session was not saved.'
     Assert-Equal 'solve' $savedActiveSession.phase 'Active session phase was not saved.'
     Assert-Equal 'diagnosis' $savedActiveSession.topic_id 'Active session topic was not saved.'
     Assert-Equal $null $savedActiveSession.problem_slug 'Null problem_slug should be preserved.'
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $testRoot 'learner/active-session.backup.json'))) 'Active session should not create a backup file.'
+    $activeSessionArtifacts = @(
+        Get-ChildItem -LiteralPath (Join-Path $testRoot 'learner') -File |
+            Where-Object { $_.Name -like 'active-session.json.*' -or $_.Name -like 'active-session.*.bak' }
+    )
+    Assert-Equal 0 $activeSessionArtifacts.Count 'Active session save left a temporary or backup artifact.'
+
+    $writeJsonAtomicCommands = Get-WriteJsonAtomicCommandAsts
+    $cleanupCommands = @(
+        $writeJsonAtomicCommands |
+            Where-Object { $_.GetCommandName() -eq 'Remove-Item' } |
+            ForEach-Object { $_.Extent.Text }
+    )
+    Assert-Equal 1 $cleanupCommands.Count 'Write-JsonAtomic should have exactly one cleanup path.'
+    Assert-True ($cleanupCommands[0] -match '\$tempPath') 'Write-JsonAtomic cleanup should target only the temporary file path.'
+
+    $replaceCommands = @(
+        $writeJsonAtomicCommands |
+            Where-Object { $_.Extent.Text -match '\[System\.IO\.File\]::Replace' } |
+            ForEach-Object { $_.Extent.Text }
+    )
+    $transientBackupReplaceCommands = @(
+        $replaceCommands | Where-Object { $_ -match '\.bak|transientBackupPath' }
+    )
+    Assert-Equal 0 $transientBackupReplaceCommands.Count 'Write-JsonAtomic should not synthesize a transient backup path for no-backup saves.'
 }
 finally {
     if (Test-Path -LiteralPath $testRoot) {
-        Remove-Item -LiteralPath $testRoot -Recurse -Force
+        Microsoft.PowerShell.Management\Remove-Item -LiteralPath $testRoot -Recurse -Force
     }
 }
