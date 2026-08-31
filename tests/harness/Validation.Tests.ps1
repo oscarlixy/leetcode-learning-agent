@@ -219,30 +219,38 @@ try {
         last_updated_at = '2026-08-31T00:10:00+08:00'
     }
 
-    $successProblemsRoot = Join-Path $tempRoot 'success-problems'
-    New-Item -ItemType Directory -Path $successProblemsRoot -Force | Out-Null
-    New-ProblemWorkspaceFixture $successProblemsRoot '1-two-sum' 1 'two-sum'
-    Assert-ActiveSessionDocument $activeSolve $roadmap $successProblemsRoot
+    $singleValidWithMalformedSiblingsRoot = Join-Path $tempRoot 'single-valid-with-malformed-siblings'
+    New-Item -ItemType Directory -Path $singleValidWithMalformedSiblingsRoot -Force | Out-Null
+    New-ProblemWorkspaceFixture $singleValidWithMalformedSiblingsRoot '1-two-sum' 1 'two-sum'
+    New-ProblemWorkspaceFixture $singleValidWithMalformedSiblingsRoot 'wrong-two-sum' 1 'two-sum' -SkipMeta
+    New-ProblemWorkspaceFixture $singleValidWithMalformedSiblingsRoot '3-two-sum' 3 'two-sum' -RawMetaJson '{ invalid json'
+    Assert-ActiveSessionDocument $activeSolve $roadmap $singleValidWithMalformedSiblingsRoot
 
-    $wrongNameProblemsRoot = Join-Path $tempRoot 'wrong-name-problems'
-    New-Item -ItemType Directory -Path $wrongNameProblemsRoot -Force | Out-Null
-    New-ProblemWorkspaceFixture $wrongNameProblemsRoot 'wrong-two-sum' 1 'two-sum'
-    Assert-Throws { Assert-ActiveSessionDocument $activeSolve $roadmap $wrongNameProblemsRoot } 'problem_slug'
-
-    $missingMetaProblemsRoot = Join-Path $tempRoot 'missing-meta-problems'
-    New-Item -ItemType Directory -Path $missingMetaProblemsRoot -Force | Out-Null
-    New-ProblemWorkspaceFixture $missingMetaProblemsRoot '1-two-sum' 1 'two-sum' -SkipMeta
-    Assert-Throws { Assert-ActiveSessionDocument $activeSolve $roadmap $missingMetaProblemsRoot } 'problem_slug'
-
-    $missingProblem = Copy-JsonValue $activeSolve
-    $missingProblem.problem_slug = 'not-found'
-    Assert-Throws { Assert-ActiveSessionDocument $missingProblem $roadmap $successProblemsRoot } 'problem_slug'
+    $onlyMalformedExactRoot = Join-Path $tempRoot 'only-malformed-exact'
+    New-Item -ItemType Directory -Path $onlyMalformedExactRoot -Force | Out-Null
+    New-ProblemWorkspaceFixture $onlyMalformedExactRoot '1-two-sum' 1 'two-sum' -SkipMeta
+    Assert-Throws { Assert-ActiveSessionDocument $activeSolve $roadmap $onlyMalformedExactRoot } 'problem_slug'
 
     $ambiguousProblemsRoot = Join-Path $tempRoot 'ambiguous-problems'
     New-Item -ItemType Directory -Path $ambiguousProblemsRoot -Force | Out-Null
     New-ProblemWorkspaceFixture $ambiguousProblemsRoot '1-two-sum' 1 'two-sum'
     New-ProblemWorkspaceFixture $ambiguousProblemsRoot '2-two-sum' 2 'two-sum'
     Assert-Throws { Assert-ActiveSessionDocument $activeSolve $roadmap $ambiguousProblemsRoot } 'problem_slug'
+
+    $mismatchedDirectoryMetadataRoot = Join-Path $tempRoot 'mismatched-directory-metadata'
+    New-Item -ItemType Directory -Path $mismatchedDirectoryMetadataRoot -Force | Out-Null
+    New-ProblemWorkspaceFixture $mismatchedDirectoryMetadataRoot 'wrong-two-sum' 1 'two-sum'
+    Assert-Throws { Assert-ActiveSessionDocument $activeSolve $roadmap $mismatchedDirectoryMetadataRoot } 'problem_slug'
+
+    $mismatchedDirectoryMetadataIgnoredRoot = Join-Path $tempRoot 'mismatched-directory-metadata-ignored'
+    New-Item -ItemType Directory -Path $mismatchedDirectoryMetadataIgnoredRoot -Force | Out-Null
+    New-ProblemWorkspaceFixture $mismatchedDirectoryMetadataIgnoredRoot '1-two-sum' 1 'two-sum'
+    New-ProblemWorkspaceFixture $mismatchedDirectoryMetadataIgnoredRoot 'wrong-two-sum' 1 'two-sum'
+    Assert-ActiveSessionDocument $activeSolve $roadmap $mismatchedDirectoryMetadataIgnoredRoot
+
+    $missingProblem = Copy-JsonValue $activeSolve
+    $missingProblem.problem_slug = 'not-found'
+    Assert-Throws { Assert-ActiveSessionDocument $missingProblem $roadmap $singleValidWithMalformedSiblingsRoot } 'problem_slug'
 
     $unrelatedMalformedProblemsRoot = Join-Path $tempRoot 'unrelated-malformed-problems'
     New-Item -ItemType Directory -Path $unrelatedMalformedProblemsRoot -Force | Out-Null

@@ -686,29 +686,25 @@ function Get-MatchingProblemWorkspaces {
             continue
         }
 
-        if (-not $child.Name.EndsWith("-$ProblemSlug", [System.StringComparison]::Ordinal)) {
-            continue
-        }
-
         $metaPath = Join-Path $child.FullName 'meta.json'
         if (-not (Test-Path -LiteralPath $metaPath -PathType Leaf)) {
-            throw "active-session problem_slug [$ProblemSlug] targeted workspace [$($child.Name)] is missing valid meta.json."
+            continue
         }
 
         try {
             $metaDocument = Read-JsonDocument $metaPath
             Assert-ProblemDocument $metaDocument $Roadmap
         } catch {
-            throw "active-session problem_slug [$ProblemSlug] targeted workspace [$($child.Name)] has invalid meta.json: $($_.Exception.Message)"
+            continue
         }
 
         if ($metaDocument.slug -ne $ProblemSlug) {
-            throw "active-session problem_slug [$ProblemSlug] targeted workspace [$($child.Name)] has mismatched meta.json slug [$($metaDocument.slug)]."
+            continue
         }
 
         $expectedLeafName = "$($metaDocument.problem_id)-$($metaDocument.slug)"
         if ($child.Name -ne $expectedLeafName) {
-            throw "active-session problem_slug [$ProblemSlug] targeted workspace [$($child.Name)] must be named [$expectedLeafName]."
+            continue
         }
 
         [void]$matches.Add($child.FullName)
