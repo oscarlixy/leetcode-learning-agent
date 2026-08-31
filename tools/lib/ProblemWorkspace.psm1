@@ -51,8 +51,9 @@ function New-ProblemWorkspace {
         throw "Problem template [$templateRoot] does not exist."
     }
 
+    $canonicalProblemId = Assert-ProblemIdPathSegment -ProblemId $ProblemId
     $canonicalSlug = Assert-CanonicalSlug -Slug $Slug
-    $destinationLeafName = '{0}-{1}' -f ([string]$ProblemId), $canonicalSlug
+    $destinationLeafName = '{0}-{1}' -f $canonicalProblemId, $canonicalSlug
     $destinationPath = Resolve-RepoScopedPath -Path (Join-Path 'problems' $destinationLeafName) -BasePath $resolvedRepoRoot -Label 'problem workspace'
     Assert-ChildPath -RootPath $resolvedProblemsRoot -CandidatePath $destinationPath -Label 'problem workspace'
 
@@ -143,6 +144,44 @@ function Assert-CanonicalSlug {
     }
 
     return $Slug
+}
+
+function Assert-ProblemIdPathSegment {
+    param($ProblemId)
+
+    if ($ProblemId -is [string]) {
+        if ([string]::IsNullOrWhiteSpace($ProblemId)) {
+            throw 'problem_id must not be empty.'
+        }
+    } elseif (
+        $ProblemId -is [byte] -or
+        $ProblemId -is [sbyte] -or
+        $ProblemId -is [int16] -or
+        $ProblemId -is [uint16] -or
+        $ProblemId -is [int32] -or
+        $ProblemId -is [uint32] -or
+        $ProblemId -is [int64] -or
+        $ProblemId -is [uint64]
+    ) {
+        if ($ProblemId -lt 1) {
+            throw 'problem_id must be positive.'
+        }
+    } else {
+        throw 'problem_id must be an integer or string.'
+    }
+
+    $problemIdText = [string]$ProblemId
+    if ($problemIdText -eq '.' -or $problemIdText -eq '..') {
+        throw "problem_id [$problemIdText] must be a single safe path segment."
+    }
+    if (
+        $problemIdText.Contains([System.IO.Path]::DirectorySeparatorChar) -or
+        $problemIdText.Contains([System.IO.Path]::AltDirectorySeparatorChar)
+    ) {
+        throw "problem_id [$problemIdText] must be a single safe path segment."
+    }
+
+    return $problemIdText
 }
 
 function Resolve-RepoScopedPath {

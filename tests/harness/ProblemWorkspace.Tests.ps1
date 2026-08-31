@@ -167,6 +167,16 @@ try {
         $bad.Source = 'hackerrank'
         New-ProblemWorkspace @bad
     } 'source|invalid'
+    Assert-Throws {
+        $bad = New-ProblemParameters -RepoRoot $validationRoot
+        $bad.ProblemId = 'nested/child'
+        New-ProblemWorkspace @bad
+    } 'problem_id|path segment|invalid'
+    Assert-Throws {
+        $bad = New-ProblemParameters -RepoRoot $validationRoot
+        $bad.ProblemId = '1/../2'
+        New-ProblemWorkspace @bad
+    } 'problem_id|path segment|invalid'
 }
 finally {
     if (Test-Path -LiteralPath $validationRoot) {
