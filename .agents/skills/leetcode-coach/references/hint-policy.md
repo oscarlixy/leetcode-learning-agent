@@ -2,6 +2,8 @@
 
 Hints are progressive. `hint_level` starts at 0 and increases by one step only after an explicit learner request for more help. A failed test run does not auto-escalate.
 
+After every hint_level increase, save `active-session.json` with `pwsh -NoProfile -File tools/update-state.ps1 -Kind active-session -CandidatePath learner/active-session.candidate.json` so resume state stays current.
+
 | Level | Agent may provide | Agent must not provide |
 | --- | --- | --- |
 | L1 | Restate key constraints, point out missed boundaries, ask for a manual trace | A specific algorithm template |

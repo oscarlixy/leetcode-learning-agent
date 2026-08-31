@@ -9,6 +9,7 @@
 - Detect the saved active session.
 - Offer exactly two choices: `continue` or `early review`.
 - Resume from the stored phase and hint level if the learner chooses continue.
+- Use the current saved state because every phase transition and hint_level increase is persisted before resume.
 - Avoid starting unrelated new material first.
 
 ## Must not

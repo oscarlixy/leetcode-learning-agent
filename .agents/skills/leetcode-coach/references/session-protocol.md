@@ -12,7 +12,8 @@ Run `pwsh -NoProfile -File tools/check.ps1` before any stateful learning work.
 - Allowed shape example: `Before we pick today's first exercise, what C++ STL containers or operations already feel comfortable to you, and which ones still feel fuzzy?`
 - In that same opening, briefly tell the learner that today's session will be saved in the repository state and scheduled for review at the end.
 - For a self-selected problem, create or reuse the workspace with:
-  `pwsh -NoProfile -File tools/new-problem.ps1 -ProblemId 1 -Slug two-sum -Title 'Two Sum' -Source leetcode -Difficulty easy -PrimaryTopicId hash-table -SecondaryTopicIds arrays-strings`
+  `pwsh -NoProfile -File tools/new-problem.ps1 -RepoRoot (Resolve-Path '.') -ProblemId $ProblemId -Slug $Slug -Title $Title -Source $Source -Url $Url -Difficulty $Difficulty -PrimaryTopicId $PrimaryTopicId -SecondaryTopicIds $SecondaryTopicIds`
+  Set those variables from validated learner-provided metadata: `ProblemId`, `Slug`, `Title`, `Source`, `Url`, `Difficulty`, `PrimaryTopicId`, and at most two `SecondaryTopicIds`; do not hardcode a specific problem.
 
 ## Transition Map
 
@@ -21,6 +22,7 @@ Run `pwsh -NoProfile -File tools/check.ps1` before any stateful learning work.
 - `concept -> solve`: after 5-8 minutes of concept modeling, examples, and learner restatement.
 - `solve -> review`: after 15-20 minutes of learner-led solving, testing, and debugging.
 - `review -> schedule`: after 5-8 minutes of invariant, complexity, blocker, edge-case, and transfer reflection.
+- After every phase transition, save `active-session.json` with `pwsh -NoProfile -File tools/update-state.ps1 -Kind active-session -CandidatePath learner/active-session.candidate.json`.
 
 ## Recall
 
@@ -45,6 +47,7 @@ Run `pwsh -NoProfile -File tools/check.ps1` before any stateful learning work.
 
 - Use `review.md` to capture invariant, complexity, original blocker, edge cases, and transfer signal.
 - If the learner stopped mid-session, keep the saved `phase` and `hint_level` aligned with what actually happened.
+- Resume behavior depends on the current saved phase and hint level, so keep the active session current after each transition.
 
 ## Schedule
 

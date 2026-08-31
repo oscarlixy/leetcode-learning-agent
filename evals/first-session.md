@@ -8,9 +8,9 @@
 
 - Read learner state before choosing the session path.
 - Start from `diagnosis` for a first session.
-- Ask one question before assigning the next step.
+- Ask exactly one question before assigning the next step.
 - Preserve a no solution opening and keep the learner thinking.
-- Mention how the session will be saved and reviewed later.
+- Mention how the session will be saved in repository state and reviewed later.
 
 ## Must not
 
