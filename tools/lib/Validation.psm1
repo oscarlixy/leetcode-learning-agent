@@ -241,11 +241,16 @@ function Assert-ActiveSessionDocument {
         throw "active-session topic_id [$($Document.topic_id)] does not exist in the roadmap."
     }
 
-    Assert-NonEmptyString $Document.problem_slug 'active-session problem_slug'
-    Assert-SlugValue $Document.problem_slug 'active-session problem_slug'
     Assert-EnumValue $Document.phase @('recall', 'concept', 'solve', 'review', 'complete') 'active-session phase'
     Assert-IntegerRangeValue $Document.hint_level 0 5 'active-session hint_level'
     Assert-DateTimeOffsetString $Document.last_updated_at 'active-session last_updated_at'
+
+    if ($null -eq $Document.problem_slug) {
+        return
+    }
+
+    Assert-NonEmptyString $Document.problem_slug 'active-session problem_slug'
+    Assert-SlugValue $Document.problem_slug 'active-session problem_slug'
 
     $matchingWorkspaces = @(Get-MatchingProblemWorkspaces $ProblemsRoot $Document.problem_slug $Roadmap)
     if ($matchingWorkspaces.Count -eq 0) {
