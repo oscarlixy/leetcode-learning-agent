@@ -71,16 +71,28 @@ function New-ProblemWorkspaceFixture {
     param(
         [string]$ProblemsRoot,
         [string]$DirectoryName,
-        [string]$MetaSlug
+        [object]$ProblemId,
+        [string]$MetaSlug,
+        [string]$RawMetaJson,
+        [switch]$SkipMeta
     )
 
     $workspacePath = Join-Path $ProblemsRoot $DirectoryName
     New-Item -ItemType Directory -Path $workspacePath -Force | Out-Null
 
+    if ($SkipMeta) {
+        return
+    }
+
+    if ($PSBoundParameters.ContainsKey('RawMetaJson')) {
+        Set-Content -LiteralPath (Join-Path $workspacePath 'meta.json') -Value $RawMetaJson -Encoding utf8
+        return
+    }
+
     $meta = [pscustomobject]@{
         schema_version = 1
         source = 'leetcode'
-        problem_id = 1
+        problem_id = $ProblemId
         slug = $MetaSlug
         title = 'Fixture Problem'
         url = "https://leetcode.com/problems/$MetaSlug/"
@@ -195,9 +207,6 @@ Assert-Throws { Assert-RoadmapDocument $cyclic } 'cycle'
 
 $tempRoot = New-TestDirectory
 try {
-    $problemsRoot = Join-Path $tempRoot 'problems'
-    New-Item -ItemType Directory -Path $problemsRoot -Force | Out-Null
-
     $activeSolve = [pscustomobject]@{
         schema_version = 1
         active = $true
@@ -210,15 +219,36 @@ try {
         last_updated_at = '2026-08-31T00:10:00+08:00'
     }
 
-    New-ProblemWorkspaceFixture $problemsRoot '1-two-sum' 'two-sum'
-    Assert-ActiveSessionDocument $activeSolve $roadmap $problemsRoot
+    $successProblemsRoot = Join-Path $tempRoot 'success-problems'
+    New-Item -ItemType Directory -Path $successProblemsRoot -Force | Out-Null
+    New-ProblemWorkspaceFixture $successProblemsRoot '1-two-sum' 1 'two-sum'
+    Assert-ActiveSessionDocument $activeSolve $roadmap $successProblemsRoot
+
+    $wrongNameProblemsRoot = Join-Path $tempRoot 'wrong-name-problems'
+    New-Item -ItemType Directory -Path $wrongNameProblemsRoot -Force | Out-Null
+    New-ProblemWorkspaceFixture $wrongNameProblemsRoot 'wrong-two-sum' 1 'two-sum'
+    Assert-Throws { Assert-ActiveSessionDocument $activeSolve $roadmap $wrongNameProblemsRoot } 'problem_slug'
+
+    $missingMetaProblemsRoot = Join-Path $tempRoot 'missing-meta-problems'
+    New-Item -ItemType Directory -Path $missingMetaProblemsRoot -Force | Out-Null
+    New-ProblemWorkspaceFixture $missingMetaProblemsRoot '1-two-sum' 1 'two-sum' -SkipMeta
+    Assert-Throws { Assert-ActiveSessionDocument $activeSolve $roadmap $missingMetaProblemsRoot } 'problem_slug'
 
     $missingProblem = Copy-JsonValue $activeSolve
     $missingProblem.problem_slug = 'not-found'
-    Assert-Throws { Assert-ActiveSessionDocument $missingProblem $roadmap $problemsRoot } 'problem_slug'
+    Assert-Throws { Assert-ActiveSessionDocument $missingProblem $roadmap $successProblemsRoot } 'problem_slug'
 
-    New-ProblemWorkspaceFixture $problemsRoot '2-two-sum' 'two-sum'
-    Assert-Throws { Assert-ActiveSessionDocument $activeSolve $roadmap $problemsRoot } 'problem_slug'
+    $ambiguousProblemsRoot = Join-Path $tempRoot 'ambiguous-problems'
+    New-Item -ItemType Directory -Path $ambiguousProblemsRoot -Force | Out-Null
+    New-ProblemWorkspaceFixture $ambiguousProblemsRoot '1-two-sum' 1 'two-sum'
+    New-ProblemWorkspaceFixture $ambiguousProblemsRoot '2-two-sum' 2 'two-sum'
+    Assert-Throws { Assert-ActiveSessionDocument $activeSolve $roadmap $ambiguousProblemsRoot } 'problem_slug'
+
+    $unrelatedMalformedProblemsRoot = Join-Path $tempRoot 'unrelated-malformed-problems'
+    New-Item -ItemType Directory -Path $unrelatedMalformedProblemsRoot -Force | Out-Null
+    New-ProblemWorkspaceFixture $unrelatedMalformedProblemsRoot '1-two-sum' 1 'two-sum'
+    New-ProblemWorkspaceFixture $unrelatedMalformedProblemsRoot 'broken-problem' 99 'broken-problem' -RawMetaJson '{ invalid json'
+    Assert-ActiveSessionDocument $activeSolve $roadmap $unrelatedMalformedProblemsRoot
 }
 finally {
     if (Test-Path -LiteralPath $tempRoot) {

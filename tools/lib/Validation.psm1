@@ -247,7 +247,7 @@ function Assert-ActiveSessionDocument {
     Assert-IntegerRangeValue $Document.hint_level 0 5 'active-session hint_level'
     Assert-DateTimeOffsetString $Document.last_updated_at 'active-session last_updated_at'
 
-    $matchingWorkspaces = @(Get-MatchingProblemWorkspaces $ProblemsRoot $Document.problem_slug)
+    $matchingWorkspaces = @(Get-MatchingProblemWorkspaces $ProblemsRoot $Document.problem_slug $Roadmap)
     if ($matchingWorkspaces.Count -eq 0) {
         throw "active-session problem_slug [$($Document.problem_slug)] matched no workspace."
     }
@@ -671,7 +671,8 @@ function Get-ObjectPropertyValue {
 function Get-MatchingProblemWorkspaces {
     param(
         [string]$ProblemsRoot,
-        [string]$ProblemSlug
+        [string]$ProblemSlug,
+        $Roadmap
     )
 
     $problemsRootPath = [System.IO.Path]::GetFullPath($ProblemsRoot)
@@ -685,25 +686,32 @@ function Get-MatchingProblemWorkspaces {
             continue
         }
 
-        $metaPath = Join-Path $child.FullName 'meta.json'
-        if (Test-Path -LiteralPath $metaPath -PathType Leaf) {
-            $metaDocument = Read-JsonDocument $metaPath
-            $slugProperty = $metaDocument.PSObject.Properties['slug']
-            if ($null -eq $slugProperty) {
-                throw "problem workspace [$($child.Name)] meta.json is missing [slug]."
-            }
-
-            $metaSlug = $slugProperty.Value
-            Assert-SlugValue $metaSlug "problem workspace [$($child.Name)] meta.json slug"
-            if ($metaSlug -eq $ProblemSlug) {
-                [void]$matches.Add($child.FullName)
-            }
+        if (-not $child.Name.EndsWith("-$ProblemSlug", [System.StringComparison]::Ordinal)) {
             continue
         }
 
-        if ($child.Name.EndsWith("-$ProblemSlug", [System.StringComparison]::Ordinal)) {
-            [void]$matches.Add($child.FullName)
+        $metaPath = Join-Path $child.FullName 'meta.json'
+        if (-not (Test-Path -LiteralPath $metaPath -PathType Leaf)) {
+            throw "active-session problem_slug [$ProblemSlug] targeted workspace [$($child.Name)] is missing valid meta.json."
         }
+
+        try {
+            $metaDocument = Read-JsonDocument $metaPath
+            Assert-ProblemDocument $metaDocument $Roadmap
+        } catch {
+            throw "active-session problem_slug [$ProblemSlug] targeted workspace [$($child.Name)] has invalid meta.json: $($_.Exception.Message)"
+        }
+
+        if ($metaDocument.slug -ne $ProblemSlug) {
+            throw "active-session problem_slug [$ProblemSlug] targeted workspace [$($child.Name)] has mismatched meta.json slug [$($metaDocument.slug)]."
+        }
+
+        $expectedLeafName = "$($metaDocument.problem_id)-$($metaDocument.slug)"
+        if ($child.Name -ne $expectedLeafName) {
+            throw "active-session problem_slug [$ProblemSlug] targeted workspace [$($child.Name)] must be named [$expectedLeafName]."
+        }
+
+        [void]$matches.Add($child.FullName)
     }
 
     return $matches.ToArray()
