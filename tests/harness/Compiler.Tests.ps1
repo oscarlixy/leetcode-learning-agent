@@ -31,10 +31,11 @@ Assert-True ($gnuCommand.Arguments -contains '-Wextra') 'GNU command lacks extra
 Assert-True ($gnuCommand.Arguments -contains '-Wpedantic') 'GNU command lacks pedantic warnings.'
 
 $msvc = [pscustomobject]@{ Family = 'msvc'; Path = 'cl.exe' }
-$msvcCommand = Get-CppCompileCommand $msvc 'C:/work/tests.cpp' 'C:/work/tests.exe'
+$msvcCommand = Get-CppCompileCommand $msvc 'C:/work/tests.cpp' 'C:/work/.build/tests.exe'
 Assert-True ($msvcCommand.Arguments -contains '/std:c++20') 'MSVC command lacks C++20.'
 Assert-True ($msvcCommand.Arguments -contains '/W4') 'MSVC command lacks warnings.'
 Assert-True ($msvcCommand.Arguments -contains '/EHsc') 'MSVC command lacks exception handling mode.'
+Assert-True ($msvcCommand.Arguments -contains '/Fo:C:/work/.build/tests.obj') 'MSVC command must place object output in .build.'
 
 $problemRoot = New-CppProblemFixture
 try {

@@ -70,6 +70,33 @@ function Find-CppCompiler {
     return $null
 }
 
+function Join-ChildPathPreservingStyle {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ParentPath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ChildName
+    )
+
+    $separator = if ($ParentPath.Contains('/') -and -not $ParentPath.Contains('\')) { '/' } else { '\' }
+    return "$($ParentPath.TrimEnd('\', '/'))$separator$ChildName"
+}
+
+function Get-ParentPathPreservingStyle {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $lastSeparatorIndex = [Math]::Max($Path.LastIndexOf('/'), $Path.LastIndexOf('\'))
+    if ($lastSeparatorIndex -lt 0) {
+        throw "Path [$Path] does not include a parent directory."
+    }
+
+    return $Path.Substring(0, $lastSeparatorIndex)
+}
+
 function Get-CppCompileCommand {
     [CmdletBinding()]
     param(
@@ -85,7 +112,10 @@ function Get-CppCompileCommand {
 
     switch ($Compiler.Family) {
         'msvc' {
-            $arguments = @('/nologo', '/std:c++20', '/W4', '/EHsc', $SourcePath, "/Fe:$OutputPath")
+            $outputDirectory = Get-ParentPathPreservingStyle -Path $OutputPath
+            $objectFileName = ([System.IO.Path]::GetFileNameWithoutExtension($SourcePath)) + '.obj'
+            $objectPath = Join-ChildPathPreservingStyle -ParentPath $outputDirectory -ChildName $objectFileName
+            $arguments = @('/nologo', '/std:c++20', '/W4', '/EHsc', $SourcePath, "/Fe:$OutputPath", "/Fo:$objectPath")
             break
         }
         'clang' {
