@@ -733,6 +733,207 @@ function Test-IsIntegerValue {
     )
 }
 
+function Get-RepositoryConsistencyReport {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RepoRoot
+    )
+
+    $resolvedRepoRoot = Resolve-ConsistencyPath -Path $RepoRoot -Label 'repository root'
+    if (-not (Test-Path -LiteralPath $resolvedRepoRoot -PathType Container)) {
+        throw "Repository root [$resolvedRepoRoot] does not exist."
+    }
+
+    $ok = [System.Collections.Generic.List[string]]::new()
+    $errors = [System.Collections.Generic.List[string]]::new()
+
+    $roadmapResult = Test-ConsistencyDocument `
+        -Path (Join-Path $resolvedRepoRoot 'curriculum/roadmap.json') `
+        -Label 'curriculum/roadmap.json' `
+        -Validator {
+            param($Document)
+            Assert-RoadmapDocument $Document
+        } `
+        -Ok $ok `
+        -Errors $errors
+
+    $profileResult = Test-ConsistencyDocument `
+        -Path (Join-Path $resolvedRepoRoot 'learner/profile.json') `
+        -Label 'learner/profile.json' `
+        -Validator {
+            param($Document)
+            Assert-ProfileDocument $Document
+        } `
+        -Ok $ok `
+        -Errors $errors
+
+    if ($roadmapResult.IsValid) {
+        [void](Test-ConsistencyDocument `
+            -Path (Join-Path $resolvedRepoRoot 'learner/state.json') `
+            -Label 'learner/state.json' `
+            -Validator {
+                param($Document)
+                Assert-StateDocument $Document $roadmapResult.Document
+            } `
+            -Ok $ok `
+            -Errors $errors)
+
+        [void](Test-ConsistencyDocument `
+            -Path (Join-Path $resolvedRepoRoot 'learner/state.backup.json') `
+            -Label 'learner/state.backup.json' `
+            -Validator {
+                param($Document)
+                Assert-StateDocument $Document $roadmapResult.Document
+            } `
+            -Ok $ok `
+            -Errors $errors)
+
+        [void](Test-ConsistencyDocument `
+            -Path (Join-Path $resolvedRepoRoot 'learner/active-session.json') `
+            -Label 'learner/active-session.json' `
+            -Validator {
+                param($Document)
+                Assert-ActiveSessionDocument $Document $roadmapResult.Document (Join-Path $resolvedRepoRoot 'problems')
+            } `
+            -Ok $ok `
+            -Errors $errors)
+
+        Test-ProblemWorkspaceConsistency `
+            -ProblemsRoot (Join-Path $resolvedRepoRoot 'problems') `
+            -Roadmap $roadmapResult.Document `
+            -Ok $ok `
+            -Errors $errors
+    } else {
+        Add-ConsistencyError -Errors $errors -Message 'Dependent learner and problem workspace checks skipped because curriculum/roadmap.json is invalid.'
+    }
+
+    Test-VisualizationConsistency -RepoRoot $resolvedRepoRoot -Ok $ok -Errors $errors
+
+    return [pscustomobject]@{
+        Ok = $ok.ToArray()
+        Errors = $errors.ToArray()
+    }
+}
+
+function Test-ConsistencyDocument {
+    param(
+        [string]$Path,
+        [string]$Label,
+        [scriptblock]$Validator,
+        [System.Collections.Generic.List[string]]$Ok,
+        [System.Collections.Generic.List[string]]$Errors
+    )
+
+    try {
+        $document = Read-JsonDocument $Path
+        & $Validator $document
+        [void]$Ok.Add($Label)
+        return [pscustomobject]@{
+            IsValid = $true
+            Document = $document
+        }
+    } catch {
+        Add-ConsistencyError -Errors $Errors -Message "${Label}: $($_.Exception.Message)"
+        return [pscustomobject]@{
+            IsValid = $false
+            Document = $null
+        }
+    }
+}
+
+function Test-ProblemWorkspaceConsistency {
+    param(
+        [string]$ProblemsRoot,
+        $Roadmap,
+        [System.Collections.Generic.List[string]]$Ok,
+        [System.Collections.Generic.List[string]]$Errors
+    )
+
+    $resolvedProblemsRoot = Resolve-ConsistencyPath -Path $ProblemsRoot -Label 'problems root'
+    if (-not (Test-Path -LiteralPath $resolvedProblemsRoot -PathType Container)) {
+        Add-ConsistencyError -Errors $Errors -Message "problems root [$resolvedProblemsRoot] does not exist."
+        return
+    }
+
+    foreach ($workspace in Get-ChildItem -LiteralPath $resolvedProblemsRoot -Directory -ErrorAction Stop) {
+        if ($workspace.Name -eq '_template') {
+            continue
+        }
+
+        $metaPath = Join-Path $workspace.FullName 'meta.json'
+        if (-not (Test-Path -LiteralPath $metaPath -PathType Leaf)) {
+            Add-ConsistencyError -Errors $Errors -Message "problems/$($workspace.Name)/meta.json is missing."
+            continue
+        }
+
+        try {
+            $metaDocument = Read-JsonDocument $metaPath
+            Assert-ProblemDocument $metaDocument $Roadmap
+
+            $expectedWorkspaceName = "$($metaDocument.problem_id)-$($metaDocument.slug)"
+            if ($workspace.Name -ne $expectedWorkspaceName) {
+                throw "problem workspace directory [$($workspace.Name)] must match [$expectedWorkspaceName]."
+            }
+
+            $referencePath = Join-Path $workspace.FullName 'reference.cpp'
+            if ((Test-Path -LiteralPath $referencePath -PathType Leaf) -and $metaDocument.highest_hint_level_used -ne 5) {
+                throw "reference.cpp is only allowed when highest_hint_level_used equals 5."
+            }
+
+            [void]$Ok.Add("problems/$($workspace.Name)/meta.json")
+        } catch {
+            Add-ConsistencyError -Errors $Errors -Message "problems/$($workspace.Name)/meta.json: $($_.Exception.Message)"
+        }
+    }
+}
+
+function Test-VisualizationConsistency {
+    param(
+        [string]$RepoRoot,
+        [System.Collections.Generic.List[string]]$Ok,
+        [System.Collections.Generic.List[string]]$Errors
+    )
+
+    try {
+        Import-Module (Join-Path $PSScriptRoot 'Visualization.psm1') -Force -ErrorAction Stop
+        if (Visualization\Test-LearningPathVisualizationFresh -RepoRoot $RepoRoot) {
+            [void]$Ok.Add('visualization/learning-path.html')
+            return
+        }
+
+        Add-ConsistencyError -Errors $Errors -Message 'visualization/learning-path.html is missing or stale.'
+    } catch {
+        Add-ConsistencyError -Errors $Errors -Message "visualization/learning-path.html: $($_.Exception.Message)"
+    }
+}
+
+function Add-ConsistencyError {
+    param(
+        [System.Collections.Generic.List[string]]$Errors,
+        [string]$Message
+    )
+
+    [void]$Errors.Add($Message)
+}
+
+function Resolve-ConsistencyPath {
+    param(
+        [string]$Path,
+        [string]$Label
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        throw "$Label path must not be empty."
+    }
+
+    if ([System.Management.Automation.WildcardPattern]::ContainsWildcardCharacters($Path)) {
+        throw "$Label path [$Path] must not contain wildcard characters."
+    }
+
+    return [System.IO.Path]::GetFullPath($Path)
+}
+
 Export-ModuleMember -Function @(
     'Read-JsonDocument',
     'Assert-ProfileDocument',
@@ -740,5 +941,6 @@ Export-ModuleMember -Function @(
     'Assert-StateDocument',
     'Assert-ActiveSessionDocument',
     'Assert-ProblemDocument',
-    'Get-RoadmapNodeIds'
+    'Get-RoadmapNodeIds',
+    'Get-RepositoryConsistencyReport'
 )
