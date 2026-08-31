@@ -6,6 +6,25 @@ $script:ApprovedRoadmapStages = @(
     'sorting-recursion-trees',
     'graph-composite-search'
 )
+$script:ApprovedRoadmapNodeIds = @(
+    'diagnosis',
+    'complexity',
+    'cpp-toolbox',
+    'arrays-strings',
+    'linked-list',
+    'stack-queue',
+    'hash-table',
+    'sorting-binary-search',
+    'recursion-backtracking',
+    'binary-tree',
+    'heap-priority-queue',
+    'bfs-dfs',
+    'graph',
+    'greedy',
+    'dynamic-programming'
+)
+$script:IsoTimestampPattern = '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,7})?(?:Z|[+\-]\d{2}:\d{2})$'
+$script:IsoDatePattern = '^\d{4}-\d{2}-\d{2}$'
 
 function Read-JsonDocument {
     param([string]$Path)
@@ -71,9 +90,15 @@ function Assert-RoadmapDocument {
         throw 'roadmap document nodes must be an array.'
     }
 
+    $nodes = @($Document.nodes)
+    if ($nodes.Count -ne $script:ApprovedRoadmapNodeIds.Count) {
+        throw "roadmap must contain exactly $($script:ApprovedRoadmapNodeIds.Count) nodes."
+    }
+
     $states = @{}
     $nodeById = @{}
-    foreach ($node in $Document.nodes) {
+    for ($index = 0; $index -lt $nodes.Count; $index++) {
+        $node = $nodes[$index]
         $nodeAllowed = @(
             'id',
             'title',
@@ -85,6 +110,10 @@ function Assert-RoadmapDocument {
         )
         Assert-ObjectDocument $node 'roadmap node' $nodeAllowed
         Assert-NodeIdValue $node.id 'roadmap node id'
+        $expectedNodeId = $script:ApprovedRoadmapNodeIds[$index]
+        if ($node.id -ne $expectedNodeId) {
+            throw "roadmap node order expected [$expectedNodeId] at index [$index] but found [$($node.id)]."
+        }
         Assert-NonEmptyString $node.title 'roadmap node title'
         Assert-EnumValue $node.stage $script:ApprovedRoadmapStages 'roadmap node stage'
         Assert-StringArray $node.objectives 'roadmap node objectives' 1 $true
@@ -106,7 +135,7 @@ function Assert-RoadmapDocument {
         $states[$node.id] = 'unvisited'
     }
 
-    foreach ($node in $Document.nodes) {
+    foreach ($node in $nodes) {
         foreach ($prerequisiteId in $node.prerequisites) {
             Assert-NodeIdValue $prerequisiteId "roadmap prerequisite for [$($node.id)]"
             if (-not $nodeById.ContainsKey($prerequisiteId)) {
@@ -218,14 +247,12 @@ function Assert-ActiveSessionDocument {
     Assert-IntegerRangeValue $Document.hint_level 0 5 'active-session hint_level'
     Assert-DateTimeOffsetString $Document.last_updated_at 'active-session last_updated_at'
 
-    $problemsRootPath = [System.IO.Path]::GetFullPath($ProblemsRoot)
-    $problemPath = [System.IO.Path]::GetFullPath((Join-Path $problemsRootPath $Document.problem_slug))
-    $rootPrefix = $problemsRootPath.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
-    if (-not $problemPath.StartsWith($rootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
-        throw "active-session problem_slug [$($Document.problem_slug)] resolves outside problems root."
+    $matchingWorkspaces = @(Get-MatchingProblemWorkspaces $ProblemsRoot $Document.problem_slug)
+    if ($matchingWorkspaces.Count -eq 0) {
+        throw "active-session problem_slug [$($Document.problem_slug)] matched no workspace."
     }
-    if (-not (Test-Path -LiteralPath $problemPath -PathType Container)) {
-        throw "active-session problem_slug [$($Document.problem_slug)] does not exist."
+    if ($matchingWorkspaces.Count -gt 1) {
+        throw "active-session problem_slug [$($Document.problem_slug)] matched multiple workspaces."
     }
 }
 
@@ -448,12 +475,10 @@ function Assert-DateTimeOffsetString {
         [string]$Context
     )
 
-    if ($Value -is [datetimeoffset] -or $Value -is [datetime]) {
-        return
+    if (-not ($Value -is [string])) {
+        throw "$Context must be a string."
     }
-
-    Assert-NonEmptyString $Value $Context
-    if ($Value -notmatch '(Z|[+\-]\d{2}:\d{2})$') {
+    if ($Value -notmatch $script:IsoTimestampPattern) {
         throw "$Context must be an ISO 8601 datetime with timezone."
     }
 
@@ -488,21 +513,13 @@ function Assert-DateString {
         [string]$Context
     )
 
-    if ($Value -is [datetime]) {
-        if ($Value.TimeOfDay -ne [timespan]::Zero) {
-            throw "$Context must be a YYYY-MM-DD date."
-        }
-        return
+    if (-not ($Value -is [string])) {
+        throw "$Context must be a string."
+    }
+    if ($Value -notmatch $script:IsoDatePattern) {
+        throw "$Context must be a YYYY-MM-DD date."
     }
 
-    if ($Value -is [datetimeoffset]) {
-        if ($Value.TimeOfDay -ne [timespan]::Zero) {
-            throw "$Context must be a YYYY-MM-DD date."
-        }
-        return
-    }
-
-    Assert-NonEmptyString $Value $Context
     $parsedValue = [datetime]::MinValue
     $parsed = [datetime]::TryParseExact(
         $Value,
@@ -649,6 +666,47 @@ function Get-ObjectPropertyValue {
     )
 
     return $Object.PSObject.Properties[$PropertyName].Value
+}
+
+function Get-MatchingProblemWorkspaces {
+    param(
+        [string]$ProblemsRoot,
+        [string]$ProblemSlug
+    )
+
+    $problemsRootPath = [System.IO.Path]::GetFullPath($ProblemsRoot)
+    if (-not (Test-Path -LiteralPath $problemsRootPath -PathType Container)) {
+        return @()
+    }
+
+    $matches = [System.Collections.Generic.List[string]]::new()
+    foreach ($child in Get-ChildItem -LiteralPath $problemsRootPath -Directory -ErrorAction Stop) {
+        if ($child.Name -eq '_template') {
+            continue
+        }
+
+        $metaPath = Join-Path $child.FullName 'meta.json'
+        if (Test-Path -LiteralPath $metaPath -PathType Leaf) {
+            $metaDocument = Read-JsonDocument $metaPath
+            $slugProperty = $metaDocument.PSObject.Properties['slug']
+            if ($null -eq $slugProperty) {
+                throw "problem workspace [$($child.Name)] meta.json is missing [slug]."
+            }
+
+            $metaSlug = $slugProperty.Value
+            Assert-SlugValue $metaSlug "problem workspace [$($child.Name)] meta.json slug"
+            if ($metaSlug -eq $ProblemSlug) {
+                [void]$matches.Add($child.FullName)
+            }
+            continue
+        }
+
+        if ($child.Name.EndsWith("-$ProblemSlug", [System.StringComparison]::Ordinal)) {
+            [void]$matches.Add($child.FullName)
+        }
+    }
+
+    return $matches.ToArray()
 }
 
 function Test-IsIntegerValue {
