@@ -91,6 +91,31 @@ function Invoke-CheckScenario {
     }
 }
 
+function Invoke-CheckMultiErrorScenario {
+    param(
+        [scriptblock]$Mutate,
+        [int]$ExpectedExitCode,
+        [string[]]$ExpectedPatterns,
+        [string]$Message
+    )
+
+    $fixtureRoot = New-TestRepositoryFixture
+    try {
+        & $Mutate $fixtureRoot
+
+        $result = Invoke-CheckScript -TargetRepoRoot $fixtureRoot
+        Assert-Equal $ExpectedExitCode $result.ExitCode $Message
+        foreach ($pattern in $ExpectedPatterns) {
+            Assert-True ($result.Output -match $pattern) "$Message MissingPattern=[$pattern] Output=[$($result.Output)]"
+        }
+    }
+    finally {
+        if (Test-Path -LiteralPath $fixtureRoot) {
+            Remove-Item -LiteralPath $fixtureRoot -Recurse -Force
+        }
+    }
+}
+
 Invoke-CheckScenario -Mutate $null -ExpectedExitCode 0 -ExpectedPattern 'CHECK PASS' -Message 'Valid repository should pass the consistency check.'
 
 Invoke-CheckScenario -ExpectedExitCode 1 -ExpectedPattern 'mastery' -Message 'Out-of-range mastery should fail the consistency check.' -Mutate {
@@ -153,4 +178,32 @@ Invoke-CheckScenario -ExpectedExitCode 1 -ExpectedPattern 'visualization' -Messa
     $state = & $ReadJsonDocument $statePath
     $state.topics.diagnosis.mastery = 1
     Write-TestJsonDocument -Path $statePath -Document $state
+}
+
+Invoke-CheckMultiErrorScenario -ExpectedExitCode 1 -ExpectedPatterns @('prerequisite', 'mastery', 'hint_level', 'meta\.json is missing') -Message 'Independent learner and problem errors should still be reported when the roadmap is invalid.' -Mutate {
+    param($FixtureRoot)
+
+    $roadmapPath = Join-Path $FixtureRoot 'curriculum/roadmap.json'
+    $roadmap = & $ReadJsonDocument $roadmapPath
+    $roadmap.nodes[1].prerequisites = @('missing-topic')
+    Write-TestJsonDocument -Path $roadmapPath -Document $roadmap
+
+    $statePath = Join-Path $FixtureRoot 'learner/state.json'
+    $state = & $ReadJsonDocument $statePath
+    $state.topics.diagnosis.mastery = 8
+    Write-TestJsonDocument -Path $statePath -Document $state
+
+    $activeSessionPath = Join-Path $FixtureRoot 'learner/active-session.json'
+    $activeSession = & $ReadJsonDocument $activeSessionPath
+    $activeSession.active = $true
+    $activeSession.session_id = 'session-1'
+    $activeSession.started_at = '2026-08-31T00:00:00+08:00'
+    $activeSession.topic_id = 'diagnosis'
+    $activeSession.problem_slug = 'two-sum'
+    $activeSession.phase = 'solve'
+    $activeSession.hint_level = 9
+    $activeSession.last_updated_at = '2026-08-31T00:10:00+08:00'
+    Write-TestJsonDocument -Path $activeSessionPath -Document $activeSession
+
+    Remove-Item -LiteralPath (Join-Path $FixtureRoot 'problems/1-two-sum/meta.json') -Force
 }

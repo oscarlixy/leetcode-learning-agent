@@ -677,7 +677,7 @@ function Get-MatchingProblemWorkspaces {
     param(
         [string]$ProblemsRoot,
         [string]$ProblemSlug,
-        $Roadmap
+        $Roadmap = $null
     )
 
     $problemsRootPath = [System.IO.Path]::GetFullPath($ProblemsRoot)
@@ -698,7 +698,11 @@ function Get-MatchingProblemWorkspaces {
 
         try {
             $metaDocument = Read-JsonDocument $metaPath
-            Assert-ProblemDocument $metaDocument $Roadmap
+            if ($null -eq $Roadmap) {
+                Assert-ProblemDocumentIndependent $metaDocument
+            } else {
+                Assert-ProblemDocument $metaDocument $Roadmap
+            }
         } catch {
             continue
         }
@@ -758,7 +762,7 @@ function Get-RepositoryConsistencyReport {
         -Ok $ok `
         -Errors $errors
 
-    $profileResult = Test-ConsistencyDocument `
+    [void](Test-ConsistencyDocument `
         -Path (Join-Path $resolvedRepoRoot 'learner/profile.json') `
         -Label 'learner/profile.json' `
         -Validator {
@@ -766,7 +770,7 @@ function Get-RepositoryConsistencyReport {
             Assert-ProfileDocument $Document
         } `
         -Ok $ok `
-        -Errors $errors
+        -Errors $errors)
 
     if ($roadmapResult.IsValid) {
         [void](Test-ConsistencyDocument `
@@ -805,7 +809,40 @@ function Get-RepositoryConsistencyReport {
             -Ok $ok `
             -Errors $errors
     } else {
-        Add-ConsistencyError -Errors $errors -Message 'Dependent learner and problem workspace checks skipped because curriculum/roadmap.json is invalid.'
+        [void](Test-ConsistencyDocument `
+            -Path (Join-Path $resolvedRepoRoot 'learner/state.json') `
+            -Label 'learner/state.json' `
+            -Validator {
+                param($Document)
+                Assert-StateDocumentIndependent $Document
+            } `
+            -Ok $ok `
+            -Errors $errors)
+
+        [void](Test-ConsistencyDocument `
+            -Path (Join-Path $resolvedRepoRoot 'learner/state.backup.json') `
+            -Label 'learner/state.backup.json' `
+            -Validator {
+                param($Document)
+                Assert-StateDocumentIndependent $Document
+            } `
+            -Ok $ok `
+            -Errors $errors)
+
+        [void](Test-ConsistencyDocument `
+            -Path (Join-Path $resolvedRepoRoot 'learner/active-session.json') `
+            -Label 'learner/active-session.json' `
+            -Validator {
+                param($Document)
+                Assert-ActiveSessionDocumentIndependent $Document (Join-Path $resolvedRepoRoot 'problems')
+            } `
+            -Ok $ok `
+            -Errors $errors)
+
+        Test-ProblemWorkspaceConsistency `
+            -ProblemsRoot (Join-Path $resolvedRepoRoot 'problems') `
+            -Ok $ok `
+            -Errors $errors
     }
 
     Test-VisualizationConsistency -RepoRoot $resolvedRepoRoot -Ok $ok -Errors $errors
@@ -845,7 +882,7 @@ function Test-ConsistencyDocument {
 function Test-ProblemWorkspaceConsistency {
     param(
         [string]$ProblemsRoot,
-        $Roadmap,
+        $Roadmap = $null,
         [System.Collections.Generic.List[string]]$Ok,
         [System.Collections.Generic.List[string]]$Errors
     )
@@ -869,7 +906,11 @@ function Test-ProblemWorkspaceConsistency {
 
         try {
             $metaDocument = Read-JsonDocument $metaPath
-            Assert-ProblemDocument $metaDocument $Roadmap
+            if ($null -eq $Roadmap) {
+                Assert-ProblemDocumentIndependent $metaDocument
+            } else {
+                Assert-ProblemDocument $metaDocument $Roadmap
+            }
 
             $expectedWorkspaceName = "$($metaDocument.problem_id)-$($metaDocument.slug)"
             if ($workspace.Name -ne $expectedWorkspaceName) {
@@ -932,6 +973,137 @@ function Resolve-ConsistencyPath {
     }
 
     return [System.IO.Path]::GetFullPath($Path)
+}
+
+function Assert-StateDocumentIndependent {
+    param($Document)
+
+    $allowed = @('schema_version', 'current_topic_id', 'updated_at', 'topics')
+    Assert-ObjectDocument $Document 'state document' $allowed
+    Assert-ExactValue $Document 'schema_version' 1 'state document'
+    Assert-NodeIdValue $Document.current_topic_id 'state current_topic_id'
+    Assert-DateTimeOffsetString $Document.updated_at 'state updated_at'
+
+    if (-not ($Document.topics -is [System.Management.Automation.PSCustomObject])) {
+        throw 'state topics must be an object.'
+    }
+
+    foreach ($topicName in @($Document.topics.PSObject.Properties.Name)) {
+        Assert-NodeIdValue $topicName 'state topic id'
+        Assert-TopicState (Get-ObjectPropertyValue $Document.topics $topicName) $topicName
+    }
+}
+
+function Assert-ActiveSessionDocumentIndependent {
+    param(
+        $Document,
+        [string]$ProblemsRoot
+    )
+
+    $allowed = @(
+        'schema_version',
+        'active',
+        'session_id',
+        'started_at',
+        'topic_id',
+        'problem_slug',
+        'phase',
+        'hint_level',
+        'last_updated_at'
+    )
+
+    Assert-ObjectDocument $Document 'active-session document' $allowed
+    Assert-ExactValue $Document 'schema_version' 1 'active-session document'
+    Assert-BooleanValue $Document.active 'active-session active'
+
+    $sessionFields = @(
+        'session_id',
+        'started_at',
+        'topic_id',
+        'problem_slug',
+        'phase',
+        'hint_level',
+        'last_updated_at'
+    )
+
+    if (-not $Document.active) {
+        foreach ($fieldName in $sessionFields) {
+            if ($null -ne $Document.$fieldName) {
+                throw "active-session [$fieldName] must be null when active is false."
+            }
+        }
+        return
+    }
+
+    Assert-NonEmptyString $Document.session_id 'active-session session_id'
+    Assert-DateTimeOffsetString $Document.started_at 'active-session started_at'
+    Assert-NodeIdValue $Document.topic_id 'active-session topic_id'
+    Assert-EnumValue $Document.phase @('recall', 'concept', 'solve', 'review', 'complete') 'active-session phase'
+    Assert-IntegerRangeValue $Document.hint_level 0 5 'active-session hint_level'
+    Assert-DateTimeOffsetString $Document.last_updated_at 'active-session last_updated_at'
+
+    if ($null -eq $Document.problem_slug) {
+        return
+    }
+
+    Assert-NonEmptyString $Document.problem_slug 'active-session problem_slug'
+    Assert-SlugValue $Document.problem_slug 'active-session problem_slug'
+
+    $matchingWorkspaces = @(Get-MatchingProblemWorkspaces $ProblemsRoot $Document.problem_slug $null)
+    if ($matchingWorkspaces.Count -eq 0) {
+        throw "active-session problem_slug [$($Document.problem_slug)] matched no workspace."
+    }
+    if ($matchingWorkspaces.Count -gt 1) {
+        throw "active-session problem_slug [$($Document.problem_slug)] matched multiple workspaces."
+    }
+}
+
+function Assert-ProblemDocumentIndependent {
+    param($Document)
+
+    $allowed = @(
+        'schema_version',
+        'source',
+        'problem_id',
+        'slug',
+        'title',
+        'url',
+        'difficulty',
+        'primary_topic_id',
+        'secondary_topic_ids',
+        'status',
+        'attempt_count',
+        'highest_hint_level_used',
+        'created_at',
+        'last_attempted_at'
+    )
+
+    Assert-ObjectDocument $Document 'problem document' $allowed
+    Assert-ExactValue $Document 'schema_version' 1 'problem document'
+    Assert-EnumValue $Document.source @('leetcode', 'local') 'problem source'
+    Assert-ProblemIdValue $Document.problem_id
+    Assert-SlugValue $Document.slug 'problem slug'
+    Assert-NonEmptyString $Document.title 'problem title'
+    Assert-UriValue $Document.url 'problem url'
+    Assert-EnumValue $Document.difficulty @('easy', 'medium', 'hard', 'unknown') 'problem difficulty'
+    Assert-NodeIdValue $Document.primary_topic_id 'problem primary_topic_id'
+
+    Assert-StringArray $Document.secondary_topic_ids 'problem secondary_topic_ids' 0 $true
+    if ($Document.secondary_topic_ids.Count -gt 2) {
+        throw 'problem secondary_topic_ids may contain at most two entries.'
+    }
+    foreach ($secondaryTopicId in $Document.secondary_topic_ids) {
+        Assert-NodeIdValue $secondaryTopicId 'problem secondary_topic_id'
+        if ($secondaryTopicId -eq $Document.primary_topic_id) {
+            throw "problem secondary_topic_id [$secondaryTopicId] duplicates the primary topic."
+        }
+    }
+
+    Assert-EnumValue $Document.status @('new', 'attempting', 'solved', 'review') 'problem status'
+    Assert-NonNegativeIntegerValue $Document.attempt_count 'problem attempt_count'
+    Assert-IntegerRangeValue $Document.highest_hint_level_used 0 5 'problem highest_hint_level_used'
+    Assert-DateTimeOffsetString $Document.created_at 'problem created_at'
+    Assert-NullableDateTimeOffsetString $Document.last_attempted_at 'problem last_attempted_at'
 }
 
 Export-ModuleMember -Function @(
