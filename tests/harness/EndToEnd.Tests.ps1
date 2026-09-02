@@ -58,6 +58,15 @@ function Assert-FileBytesEqual {
     Assert-True ([System.Linq.Enumerable]::SequenceEqual($Expected, $actual)) $Message
 }
 
+function Assert-FileAbsent {
+    param(
+        [string]$Path,
+        [string]$Message
+    )
+
+    Assert-True (-not (Test-Path -LiteralPath $Path -PathType Leaf)) $Message
+}
+
 $fixtureRoot = New-EndToEndRepositoryFixture
 try {
     $initialCheck = Invoke-RepoScript -TargetRepoRoot $fixtureRoot -ScriptRelativePath 'tools/check.ps1'
@@ -80,7 +89,9 @@ try {
 
     $problemRoot = Join-Path $fixtureRoot 'problems/1-two-sum'
     $attemptPath = Join-Path $problemRoot 'attempt.cpp'
+    $referencePath = Join-Path $problemRoot 'reference.cpp'
     $attemptBytes = [System.IO.File]::ReadAllBytes($attemptPath)
+    Assert-FileAbsent -Path $referencePath -Message 'reference.cpp should remain absent immediately after workspace creation for a non-L5 flow.'
 
     $meta = Get-Content -LiteralPath (Join-Path $problemRoot 'meta.json') -Raw -Encoding utf8 | ConvertFrom-Json -Depth 100
     Assert-Equal 'hash-table' $meta.primary_topic_id 'new-problem should persist the primary topic.'
@@ -106,6 +117,7 @@ try {
     Assert-Equal 0 $activeSessionUpdate.ExitCode 'Saving a valid active solve session should succeed.'
     Assert-True ($activeSessionUpdate.Output -match '^UPDATED active-session$') "active-session update output mismatch. Output=[$($activeSessionUpdate.Output)]"
     Assert-FileBytesEqual -Expected $attemptBytes -Path $attemptPath -Message 'active-session update should not modify attempt.cpp.'
+    Assert-FileAbsent -Path $referencePath -Message 'reference.cpp should remain absent after active-session updates below L5.'
 
     $savedActiveSession = Get-Content -LiteralPath (Join-Path $fixtureRoot 'learner/active-session.json') -Raw -Encoding utf8 | ConvertFrom-Json -Depth 100
     Assert-True $savedActiveSession.active 'Saved active session should remain active.'
@@ -131,6 +143,7 @@ try {
     Assert-Equal 0 $stateUpdate.ExitCode 'Saving a valid learner state should succeed.'
     Assert-True ($stateUpdate.Output -match '^UPDATED state$') "state update output mismatch. Output=[$($stateUpdate.Output)]"
     Assert-FileBytesEqual -Expected $attemptBytes -Path $attemptPath -Message 'state update should not modify attempt.cpp.'
+    Assert-FileAbsent -Path $referencePath -Message 'reference.cpp should remain absent after state updates below L5.'
 
     $savedState = Get-Content -LiteralPath (Join-Path $fixtureRoot 'learner/state.json') -Raw -Encoding utf8 | ConvertFrom-Json -Depth 100
     Assert-Equal 1 $savedState.topics.diagnosis.mastery 'Saved diagnosis mastery mismatch.'
@@ -141,6 +154,7 @@ try {
     Assert-Equal 0 $visualizationUpdate.ExitCode 'update-visualization should succeed for the fixture.'
     Assert-True ($visualizationUpdate.Output -match '^UPDATED visualization/learning-path\.html$') "update-visualization output mismatch. Output=[$($visualizationUpdate.Output)]"
     Assert-FileBytesEqual -Expected $attemptBytes -Path $attemptPath -Message 'visualization update should not modify attempt.cpp.'
+    Assert-FileAbsent -Path $referencePath -Message 'reference.cpp should remain absent after visualization regeneration below L5.'
 
     Import-Module (Join-Path $fixtureRoot 'tools/lib/Visualization.psm1') -Force
     Assert-True (Test-LearningPathVisualizationFresh -RepoRoot $fixtureRoot) 'Visualization should report fresh after regeneration.'
@@ -148,6 +162,7 @@ try {
     $finalCheck = Invoke-RepoScript -TargetRepoRoot $fixtureRoot -ScriptRelativePath 'tools/check.ps1'
     Assert-Equal 0 $finalCheck.ExitCode 'Final check should pass after the end-to-end sequence.'
     Assert-True ($finalCheck.Output -match 'CHECK PASS') "Final check output mismatch. Output=[$($finalCheck.Output)]"
+    Assert-FileAbsent -Path $referencePath -Message 'reference.cpp should remain absent through the full non-L5 end-to-end sequence.'
 
     $cppResult = Invoke-RepoScript -TargetRepoRoot $fixtureRoot -ScriptRelativePath 'tools/test-cpp.ps1' -Arguments @(
         '-ProblemPath', (Join-Path $fixtureRoot 'tests/fixtures/cpp/pass')
