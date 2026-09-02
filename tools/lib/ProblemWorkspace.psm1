@@ -50,6 +50,7 @@ function New-ProblemWorkspace {
     if (-not (Test-Path -LiteralPath $templateRoot -PathType Container)) {
         throw "Problem template [$templateRoot] does not exist."
     }
+    Assert-ExactWorkspaceFiles -WorkspacePath $templateRoot -Context 'problem template'
 
     $canonicalProblemId = Assert-ProblemIdPathSegment -ProblemId $ProblemId
     $canonicalSlug = Assert-CanonicalSlug -Slug $Slug
@@ -66,7 +67,7 @@ function New-ProblemWorkspace {
     Assert-ChildPath -RootPath $resolvedProblemsRoot -CandidatePath $stagingPath -Label 'problem staging workspace'
 
     try {
-        New-Item -ItemType Directory -Path $stagingPath -Force | Out-Null
+        [void][System.IO.Directory]::CreateDirectory($stagingPath)
         Copy-TemplateContent -TemplateRoot $templateRoot -DestinationPath $stagingPath
 
         $metaDocument = New-ProblemMetaDocument `
@@ -85,6 +86,10 @@ function New-ProblemWorkspace {
             Validation\Assert-ProblemDocument $Document $roadmap
         }
 
+        Assert-ExactWorkspaceFiles -WorkspacePath $stagingPath -Context 'staged problem workspace'
+        if (Test-Path -LiteralPath $destinationPath) {
+            throw 'problem workspace already exists'
+        }
         [System.IO.Directory]::Move($stagingPath, $destinationPath)
         return $destinationPath
     }
@@ -131,8 +136,37 @@ function Copy-TemplateContent {
         [string]$DestinationPath
     )
 
-    foreach ($child in Get-ChildItem -LiteralPath $TemplateRoot -Force -ErrorAction Stop) {
-        Copy-Item -LiteralPath $child.FullName -Destination $DestinationPath -Recurse -Force
+    foreach ($child in Get-ChildItem -LiteralPath $TemplateRoot -File -Force -ErrorAction Stop) {
+        Copy-Item -LiteralPath $child.FullName -Destination $DestinationPath -Force -ErrorAction Stop
+    }
+}
+
+function Assert-ExactWorkspaceFiles {
+    param(
+        [string]$WorkspacePath,
+        [string]$Context
+    )
+
+    $requiredFileNames = @('attempt.cpp', 'meta.json', 'review.md', 'tests.cpp')
+    $requiredFileSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+    foreach ($requiredFileName in $requiredFileNames) {
+        [void]$requiredFileSet.Add($requiredFileName)
+        $requiredPath = Join-Path $WorkspacePath $requiredFileName
+        if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
+            throw "$Context required file [$requiredFileName] is missing."
+        }
+    }
+
+    $children = @(Get-ChildItem -LiteralPath $WorkspacePath -Force -ErrorAction Stop)
+    foreach ($child in $children) {
+        if (-not $child.PSIsContainer -and $requiredFileSet.Contains($child.Name)) {
+            continue
+        }
+
+        if ([string]::Equals($child.Name, 'reference.cpp', [System.StringComparison]::Ordinal)) {
+            throw "$Context must not contain reference.cpp."
+        }
+        throw "$Context contains unexpected entry [$($child.Name)]."
     }
 }
 
@@ -263,7 +297,7 @@ function Assert-NoWildcardPath {
         [string]$Label
     )
 
-    if ([System.Management.Automation.WildcardPattern]::ContainsWildcardCharacters($Path)) {
+    if ($Path.Contains('*') -or $Path.Contains('?')) {
         throw "$Label path [$Path] must not contain wildcard characters."
     }
 }

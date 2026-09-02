@@ -93,7 +93,7 @@ function Get-ResolvedPath {
         throw "$Label path must not be empty."
     }
 
-    if ([System.Management.Automation.WildcardPattern]::ContainsWildcardCharacters($Path)) {
+    if ($Path.Contains('*') -or $Path.Contains('?')) {
         throw "$Label path [$Path] must not contain wildcard characters."
     }
 

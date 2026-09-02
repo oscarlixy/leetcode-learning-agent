@@ -15,10 +15,13 @@ Use the repository JSON files as the only structured source of truth. Repeat exa
 - Fields: `schema_version`, `active`, `session_id`, `started_at`, `topic_id`, `problem_slug`, `phase`, `hint_level`, `last_updated_at`
 - `phase` uses `recall`, `concept`, `solve`, `review`, `complete`.
 - Resume from saved `phase` and `hint_level`; do not silently create a second active session.
+- A finished session is stored with `active: false` and every other nullable session field set to `null`. Never leave `active: true` with `phase: complete`; closed sessions are not resumable.
 
 ## Scheduling Rules
 
 Default review intervals are 1, 3, 7, 14, and 30 days.
+
+Read the learner timezone from `learner/profile.json.timezone`. Import `tools/lib/Scheduling.psm1`, derive today with `Get-LearnerToday -ProfilePath learner/profile.json`, and derive a review date with `Get-LearnerReviewDate -ProfilePath learner/profile.json -Days $IntervalDays`. Never use the host-local or UTC date as the learner's calendar date. Store the exact `YYYY-MM-DD` result.
 
 - Needed L4 or L5 to finish: cap `mastery` at 2 and schedule the next review in 1 day.
 - Finished under L1-L3 and can explain correctness: `mastery` may be 2 and the next review is in 3 days.
@@ -31,7 +34,8 @@ Do not invent a separate review queue. Derive it from `next_review_at`.
 ## Write Sequence
 
 - Validate and save state with `pwsh -NoProfile -File tools/update-state.ps1 -Kind state -CandidatePath learner/state.candidate.json`.
+- For an attempted problem, update its validated metadata atomically with `pwsh -NoProfile -File tools/update-problem.ps1 -ProblemPath $ProblemPath -CandidatePath "$ProblemPath/meta.candidate.json"`. Keep `attempt_count`, problem `status`, `last_attempted_at`, and `highest_hint_level_used` honest and never decreasing.
 - Validate and save the active session with `pwsh -NoProfile -File tools/update-state.ps1 -Kind active-session -CandidatePath learner/active-session.candidate.json`.
 - Refresh the visualization with `pwsh -NoProfile -File tools/update-visualization.ps1`.
 
-Do not declare the session complete until the state write succeeds and the visualization is fresh.
+Do not declare the session complete until the state/problem writes succeed, the inactive-session write succeeds, and the visualization is fresh.

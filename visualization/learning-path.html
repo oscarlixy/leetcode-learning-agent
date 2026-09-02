@@ -308,9 +308,14 @@
     </section>
 
     <aside class="detail-panel" aria-labelledby="detail-title">
-      <p class="detail-summary" id="detail-live" aria-live="polite">Select a topic to inspect its objectives, mastery, and recommended problems.</p>
+      <p class="detail-summary" id="detail-live" aria-live="polite">Select a topic to inspect its prerequisites, objectives, mastery, and recommended problems.</p>
       <h2 id="detail-title">Topic details</h2>
       <div class="detail-meta" id="detail-meta"></div>
+
+      <section aria-labelledby="detail-prerequisites-title">
+        <h3 id="detail-prerequisites-title">Prerequisites</h3>
+        <ul id="detail-prerequisites"></ul>
+      </section>
 
       <section aria-labelledby="detail-objectives-title">
         <h3 id="detail-objectives-title">Objectives</h3>
@@ -346,6 +351,7 @@
   const detailLive = document.getElementById('detail-live');
   const detailTitle = document.getElementById('detail-title');
   const detailMeta = document.getElementById('detail-meta');
+  const detailPrerequisites = document.getElementById('detail-prerequisites');
   const detailObjectives = document.getElementById('detail-objectives');
   const detailCriteria = document.getElementById('detail-criteria');
   const detailProblems = document.getElementById('detail-problems');
@@ -365,6 +371,7 @@
   const nodeButtons = new Map();
   const topics = data.state.topics;
   const currentTopicId = data.state.current_topic_id;
+  const roadmapNodesById = new Map(data.roadmap.nodes.map((node) => [node.id, node]));
   const hkToday = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Hong_Kong',
     year: 'numeric',
@@ -431,6 +438,11 @@
       detailMeta.appendChild(createChip(flag.className, [flag.text]));
     });
 
+    const prerequisiteLabels = node.prerequisites.map((prerequisiteId) => {
+      const prerequisite = roadmapNodesById.get(prerequisiteId);
+      return prerequisite ? prerequisite.title + ' (' + prerequisiteId + ')' : prerequisiteId;
+    });
+    appendList(detailPrerequisites, prerequisiteLabels.length > 0 ? prerequisiteLabels : ['None']);
     appendList(detailObjectives, node.objectives);
     appendList(detailCriteria, node.completion_criteria);
     appendList(detailProblems, node.recommended_problems);

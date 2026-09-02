@@ -111,7 +111,7 @@ function Assert-RoadmapDocument {
         Assert-ObjectDocument $node 'roadmap node' $nodeAllowed
         Assert-NodeIdValue $node.id 'roadmap node id'
         $expectedNodeId = $script:ApprovedRoadmapNodeIds[$index]
-        if ($node.id -ne $expectedNodeId) {
+        if (-not [string]::Equals($node.id, $expectedNodeId, [System.StringComparison]::Ordinal)) {
             throw "roadmap node order expected [$expectedNodeId] at index [$index] but found [$($node.id)]."
         }
         Assert-NonEmptyString $node.title 'roadmap node title'
@@ -122,7 +122,7 @@ function Assert-RoadmapDocument {
         Assert-StringArray $node.recommended_problems 'roadmap node recommended_problems' 1 $true
 
         foreach ($recommendedProblem in $node.recommended_problems) {
-            if ($recommendedProblem -notmatch '^(?:local|[0-9]+):[a-z0-9]+(?:-[a-z0-9]+)*$') {
+            if ($recommendedProblem -cnotmatch '^(?:local|[0-9]+):[a-z0-9]+(?:-[a-z0-9]+)*$') {
                 throw "roadmap node [$($node.id)] recommended problem [$recommendedProblem] is invalid."
             }
         }
@@ -169,6 +169,7 @@ function Assert-StateDocument {
     }
 
     $topicNames = @($Document.topics.PSObject.Properties.Name)
+    $topicNameSet = New-StringSet $topicNames
     foreach ($topicName in $topicNames) {
         if (-not $roadmapIdSet.Contains($topicName)) {
             throw "state topic [$topicName] does not exist in the roadmap."
@@ -176,7 +177,7 @@ function Assert-StateDocument {
     }
 
     foreach ($roadmapId in $roadmapIds) {
-        if ($topicNames -notcontains $roadmapId) {
+        if (-not $topicNameSet.Contains($roadmapId)) {
             throw "state topic [$roadmapId] is missing."
         }
     }
@@ -242,6 +243,9 @@ function Assert-ActiveSessionDocument {
     }
 
     Assert-EnumValue $Document.phase @('recall', 'concept', 'solve', 'review', 'complete') 'active-session phase'
+    if ([string]::Equals($Document.phase, 'complete', [System.StringComparison]::Ordinal)) {
+        throw 'active-session phase [complete] must be persisted as an inactive session with nullable fields set to null.'
+    }
     Assert-IntegerRangeValue $Document.hint_level 0 5 'active-session hint_level'
     Assert-DateTimeOffsetString $Document.last_updated_at 'active-session last_updated_at'
 
@@ -308,7 +312,7 @@ function Assert-ProblemDocument {
         if (-not $roadmapIdSet.Contains($secondaryTopicId)) {
             throw "problem secondary_topic_id [$secondaryTopicId] does not exist in the roadmap."
         }
-        if ($secondaryTopicId -eq $Document.primary_topic_id) {
+        if ([string]::Equals($secondaryTopicId, $Document.primary_topic_id, [System.StringComparison]::Ordinal)) {
             throw "problem secondary_topic_id [$secondaryTopicId] duplicates the primary topic."
         }
     }
@@ -342,9 +346,9 @@ function Assert-RequiredProperties {
         [string]$Context
     )
 
-    $names = @($Document.PSObject.Properties.Name)
+    $names = New-StringSet @($Document.PSObject.Properties.Name)
     foreach ($propertyName in $RequiredProperties) {
-        if ($names -notcontains $propertyName) {
+        if (-not $names.Contains($propertyName)) {
             throw "$Context is missing required property [$propertyName]."
         }
     }
@@ -357,8 +361,9 @@ function Assert-NoUnexpectedProperties {
         [string]$Context
     )
 
+    $allowedPropertySet = New-StringSet $AllowedProperties
     foreach ($propertyName in $Document.PSObject.Properties.Name) {
-        if ($AllowedProperties -notcontains $propertyName) {
+        if (-not $allowedPropertySet.Contains($propertyName)) {
             throw "$Context contains unexpected property [$propertyName]."
         }
     }
@@ -372,7 +377,20 @@ function Assert-ExactValue {
         [string]$Context
     )
 
-    if ($Document.$PropertyName -ne $ExpectedValue) {
+    $actualValue = Get-ObjectPropertyValue $Document $PropertyName
+    $matches = if ($ExpectedValue -is [string]) {
+        $actualValue -is [string] -and [string]::Equals($actualValue, $ExpectedValue, [System.StringComparison]::Ordinal)
+    } elseif (Test-IsIntegerValue $ExpectedValue) {
+        (Test-IsIntegerValue $actualValue) -and $actualValue -eq $ExpectedValue
+    } elseif ($ExpectedValue -is [bool]) {
+        $actualValue -is [bool] -and $actualValue -eq $ExpectedValue
+    } elseif ($null -eq $ExpectedValue) {
+        $null -eq $actualValue
+    } else {
+        $null -ne $actualValue -and $actualValue.GetType() -eq $ExpectedValue.GetType() -and $actualValue.Equals($ExpectedValue)
+    }
+
+    if (-not $matches) {
         throw "$Context property [$PropertyName] must equal [$ExpectedValue]."
     }
 }
@@ -387,7 +405,8 @@ function Assert-EnumValue {
     if (-not ($Value -is [string])) {
         throw "$Context must be a string."
     }
-    if ($AllowedValues -notcontains $Value) {
+    $allowedValueSet = New-StringSet $AllowedValues
+    if (-not $allowedValueSet.Contains($Value)) {
         throw "$Context value [$Value] is invalid."
     }
 }
@@ -483,7 +502,7 @@ function Assert-DateTimeOffsetString {
     if (-not ($Value -is [string])) {
         throw "$Context must be a string."
     }
-    if ($Value -notmatch $script:IsoTimestampPattern) {
+    if ($Value -cnotmatch $script:IsoTimestampPattern) {
         throw "$Context must be an ISO 8601 datetime with timezone."
     }
 
@@ -521,7 +540,7 @@ function Assert-DateString {
     if (-not ($Value -is [string])) {
         throw "$Context must be a string."
     }
-    if ($Value -notmatch $script:IsoDatePattern) {
+    if ($Value -cnotmatch $script:IsoDatePattern) {
         throw "$Context must be a YYYY-MM-DD date."
     }
 
@@ -558,7 +577,7 @@ function Assert-NodeIdValue {
     )
 
     Assert-NonEmptyString $Value $Context
-    if ($Value -notmatch '^[a-z0-9]+(?:-[a-z0-9]+)*$') {
+    if ($Value -cnotmatch '^[a-z0-9]+(?:-[a-z0-9]+)*$') {
         throw "$Context value [$Value] is invalid."
     }
 }
@@ -670,7 +689,12 @@ function Get-ObjectPropertyValue {
         [string]$PropertyName
     )
 
-    return $Object.PSObject.Properties[$PropertyName].Value
+    $matches = @($Object.PSObject.Properties | Where-Object { $_.Name -ceq $PropertyName })
+    if ($matches.Count -ne 1) {
+        throw "JSON property [$PropertyName] is missing or ambiguous."
+    }
+
+    return $matches[0].Value
 }
 
 function Get-MatchingProblemWorkspaces {
@@ -687,7 +711,7 @@ function Get-MatchingProblemWorkspaces {
 
     $matches = [System.Collections.Generic.List[string]]::new()
     foreach ($child in Get-ChildItem -LiteralPath $problemsRootPath -Directory -ErrorAction Stop) {
-        if ($child.Name -eq '_template') {
+        if ($child.Name -ceq '_template') {
             continue
         }
 
@@ -707,12 +731,12 @@ function Get-MatchingProblemWorkspaces {
             continue
         }
 
-        if ($metaDocument.slug -ne $ProblemSlug) {
+        if (-not [string]::Equals($metaDocument.slug, $ProblemSlug, [System.StringComparison]::Ordinal)) {
             continue
         }
 
         $expectedLeafName = "$($metaDocument.problem_id)-$($metaDocument.slug)"
-        if ($child.Name -ne $expectedLeafName) {
+        if (-not [string]::Equals($child.Name, $expectedLeafName, [System.StringComparison]::Ordinal)) {
             continue
         }
 
@@ -793,7 +817,7 @@ function Get-RepositoryConsistencyReport {
             -Ok $ok `
             -Errors $errors)
 
-        [void](Test-ConsistencyDocument `
+        $activeSessionResult = Test-ConsistencyDocument `
             -Path (Join-Path $resolvedRepoRoot 'learner/active-session.json') `
             -Label 'learner/active-session.json' `
             -Validator {
@@ -801,11 +825,12 @@ function Get-RepositoryConsistencyReport {
                 Assert-ActiveSessionDocument $Document $roadmapResult.Document (Join-Path $resolvedRepoRoot 'problems')
             } `
             -Ok $ok `
-            -Errors $errors)
+            -Errors $errors
 
         Test-ProblemWorkspaceConsistency `
             -ProblemsRoot (Join-Path $resolvedRepoRoot 'problems') `
             -Roadmap $roadmapResult.Document `
+            -ActiveSession $(if ($activeSessionResult.IsValid) { $activeSessionResult.Document } else { $null }) `
             -Ok $ok `
             -Errors $errors
     } else {
@@ -829,7 +854,7 @@ function Get-RepositoryConsistencyReport {
             -Ok $ok `
             -Errors $errors)
 
-        [void](Test-ConsistencyDocument `
+        $activeSessionResult = Test-ConsistencyDocument `
             -Path (Join-Path $resolvedRepoRoot 'learner/active-session.json') `
             -Label 'learner/active-session.json' `
             -Validator {
@@ -837,10 +862,11 @@ function Get-RepositoryConsistencyReport {
                 Assert-ActiveSessionDocumentIndependent $Document (Join-Path $resolvedRepoRoot 'problems')
             } `
             -Ok $ok `
-            -Errors $errors)
+            -Errors $errors
 
         Test-ProblemWorkspaceConsistency `
             -ProblemsRoot (Join-Path $resolvedRepoRoot 'problems') `
+            -ActiveSession $(if ($activeSessionResult.IsValid) { $activeSessionResult.Document } else { $null }) `
             -Ok $ok `
             -Errors $errors
     }
@@ -883,6 +909,7 @@ function Test-ProblemWorkspaceConsistency {
     param(
         [string]$ProblemsRoot,
         $Roadmap = $null,
+        $ActiveSession = $null,
         [System.Collections.Generic.List[string]]$Ok,
         [System.Collections.Generic.List[string]]$Errors
     )
@@ -893,14 +920,37 @@ function Test-ProblemWorkspaceConsistency {
         return
     }
 
+    $templatePath = Join-Path $resolvedProblemsRoot '_template'
+    if (-not (Test-Path -LiteralPath $templatePath -PathType Container)) {
+        Add-ConsistencyError -Errors $Errors -Message 'problems/_template is missing.'
+    } else {
+        $templateRequiredFileSet = New-StringSet @('attempt.cpp', 'meta.json', 'review.md', 'tests.cpp')
+        foreach ($requiredFileName in $templateRequiredFileSet) {
+            if (-not (Test-Path -LiteralPath (Join-Path $templatePath $requiredFileName) -PathType Leaf)) {
+                Add-ConsistencyError -Errors $Errors -Message "problems/_template/$requiredFileName is missing."
+            }
+        }
+        foreach ($templateChild in Get-ChildItem -LiteralPath $templatePath -Force -ErrorAction Stop) {
+            if ($templateChild.PSIsContainer -or -not $templateRequiredFileSet.Contains($templateChild.Name)) {
+                Add-ConsistencyError -Errors $Errors -Message "problems/_template contains unexpected entry [$($templateChild.Name)]."
+            }
+        }
+    }
+
     foreach ($workspace in Get-ChildItem -LiteralPath $resolvedProblemsRoot -Directory -ErrorAction Stop) {
-        if ($workspace.Name -eq '_template') {
+        if ($workspace.Name -ceq '_template') {
             continue
+        }
+
+        foreach ($requiredFileName in @('attempt.cpp', 'tests.cpp', 'review.md', 'meta.json')) {
+            $requiredFilePath = Join-Path $workspace.FullName $requiredFileName
+            if (-not (Test-Path -LiteralPath $requiredFilePath -PathType Leaf)) {
+                Add-ConsistencyError -Errors $Errors -Message "problems/$($workspace.Name)/$requiredFileName is missing."
+            }
         }
 
         $metaPath = Join-Path $workspace.FullName 'meta.json'
         if (-not (Test-Path -LiteralPath $metaPath -PathType Leaf)) {
-            Add-ConsistencyError -Errors $Errors -Message "problems/$($workspace.Name)/meta.json is missing."
             continue
         }
 
@@ -913,13 +963,23 @@ function Test-ProblemWorkspaceConsistency {
             }
 
             $expectedWorkspaceName = "$($metaDocument.problem_id)-$($metaDocument.slug)"
-            if ($workspace.Name -ne $expectedWorkspaceName) {
+            if (-not [string]::Equals($workspace.Name, $expectedWorkspaceName, [System.StringComparison]::Ordinal)) {
                 throw "problem workspace directory [$($workspace.Name)] must match [$expectedWorkspaceName]."
             }
 
             $referencePath = Join-Path $workspace.FullName 'reference.cpp'
             if ((Test-Path -LiteralPath $referencePath -PathType Leaf) -and $metaDocument.highest_hint_level_used -ne 5) {
                 throw "reference.cpp is only allowed when highest_hint_level_used equals 5."
+            }
+
+            if (
+                $null -ne $ActiveSession -and
+                $ActiveSession.active -and
+                $null -ne $ActiveSession.problem_slug -and
+                [string]::Equals($ActiveSession.problem_slug, $metaDocument.slug, [System.StringComparison]::Ordinal) -and
+                $metaDocument.highest_hint_level_used -lt $ActiveSession.hint_level
+            ) {
+                throw "problem highest_hint_level_used [$($metaDocument.highest_hint_level_used)] must be at least active-session hint_level [$($ActiveSession.hint_level)]."
             }
 
             [void]$Ok.Add("problems/$($workspace.Name)/meta.json")
@@ -968,7 +1028,7 @@ function Resolve-ConsistencyPath {
         throw "$Label path must not be empty."
     }
 
-    if ([System.Management.Automation.WildcardPattern]::ContainsWildcardCharacters($Path)) {
+    if ($Path.Contains('*') -or $Path.Contains('?')) {
         throw "$Label path [$Path] must not contain wildcard characters."
     }
 
@@ -1039,6 +1099,9 @@ function Assert-ActiveSessionDocumentIndependent {
     Assert-DateTimeOffsetString $Document.started_at 'active-session started_at'
     Assert-NodeIdValue $Document.topic_id 'active-session topic_id'
     Assert-EnumValue $Document.phase @('recall', 'concept', 'solve', 'review', 'complete') 'active-session phase'
+    if ([string]::Equals($Document.phase, 'complete', [System.StringComparison]::Ordinal)) {
+        throw 'active-session phase [complete] must be persisted as an inactive session with nullable fields set to null.'
+    }
     Assert-IntegerRangeValue $Document.hint_level 0 5 'active-session hint_level'
     Assert-DateTimeOffsetString $Document.last_updated_at 'active-session last_updated_at'
 
@@ -1094,7 +1157,7 @@ function Assert-ProblemDocumentIndependent {
     }
     foreach ($secondaryTopicId in $Document.secondary_topic_ids) {
         Assert-NodeIdValue $secondaryTopicId 'problem secondary_topic_id'
-        if ($secondaryTopicId -eq $Document.primary_topic_id) {
+        if ([string]::Equals($secondaryTopicId, $Document.primary_topic_id, [System.StringComparison]::Ordinal)) {
             throw "problem secondary_topic_id [$secondaryTopicId] duplicates the primary topic."
         }
     }

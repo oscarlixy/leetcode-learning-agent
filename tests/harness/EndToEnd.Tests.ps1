@@ -125,6 +125,22 @@ try {
     Assert-Equal 'two-sum' $savedActiveSession.problem_slug 'Saved active session problem mismatch.'
     Assert-Equal 2 $savedActiveSession.hint_level 'Saved active session hint level mismatch.'
 
+    $metaCandidatePath = Join-Path $problemRoot 'meta.candidate.json'
+    $meta.status = 'attempting'
+    $meta.attempt_count = 1
+    $meta.highest_hint_level_used = 2
+    $meta.last_attempted_at = '2026-09-02T09:15:00+08:00'
+    Write-TestJsonDocument -Path $metaCandidatePath -Document $meta
+    $metaUpdate = Invoke-RepoScript -TargetRepoRoot $fixtureRoot -ScriptRelativePath 'tools/update-problem.ps1' -Arguments @(
+        '-RepoRoot', $fixtureRoot,
+        '-ProblemPath', 'problems/1-two-sum',
+        '-CandidatePath', 'problems/1-two-sum/meta.candidate.json'
+    )
+    Assert-Equal 0 $metaUpdate.ExitCode 'Saving synchronized problem metadata should succeed.'
+    Assert-True ($metaUpdate.Output -match '^UPDATED problem metadata problems/1-two-sum$') "Problem metadata output mismatch. Output=[$($metaUpdate.Output)]"
+    Assert-FileBytesEqual -Expected $attemptBytes -Path $attemptPath -Message 'Problem metadata update should not modify attempt.cpp.'
+    Assert-FileAbsent -Path $referencePath -Message 'reference.cpp should remain absent after metadata updates below L5.'
+
     $stateCandidatePath = Join-Path $fixtureRoot 'learner/state.candidate.json'
     $stateCandidate = Get-Content -LiteralPath (Join-Path $fixtureRoot 'learner/state.json') -Raw -Encoding utf8 | ConvertFrom-Json -Depth 100
     $stateCandidate.updated_at = '2026-09-02T09:20:00+08:00'
@@ -149,6 +165,29 @@ try {
     Assert-Equal 1 $savedState.topics.diagnosis.mastery 'Saved diagnosis mastery mismatch.'
     Assert-Equal 'learning' $savedState.topics.diagnosis.status 'Saved diagnosis status mismatch.'
     Assert-Equal '2026-09-03' $savedState.topics.diagnosis.next_review_at 'Saved diagnosis review date mismatch.'
+
+    $closedSessionCandidate = [pscustomobject]@{
+        schema_version = 1
+        active = $false
+        session_id = $null
+        started_at = $null
+        topic_id = $null
+        problem_slug = $null
+        phase = $null
+        hint_level = $null
+        last_updated_at = $null
+    }
+    Write-TestJsonDocument -Path $activeSessionCandidatePath -Document $closedSessionCandidate
+    $sessionClose = Invoke-RepoScript -TargetRepoRoot $fixtureRoot -ScriptRelativePath 'tools/update-state.ps1' -Arguments @(
+        '-Kind', 'active-session',
+        '-CandidatePath', 'learner/active-session.candidate.json'
+    )
+    Assert-Equal 0 $sessionClose.ExitCode 'Closing a completed session should succeed.'
+    Assert-True ($sessionClose.Output -match '^UPDATED active-session$') "Completed-session close output mismatch. Output=[$($sessionClose.Output)]"
+    $closedSession = Get-Content -LiteralPath (Join-Path $fixtureRoot 'learner/active-session.json') -Raw -Encoding utf8 | ConvertFrom-Json -Depth 100
+    Assert-Equal $false $closedSession.active 'Completed session must not remain resumable.'
+    Assert-Equal $null $closedSession.phase 'Completed session phase must be cleared.'
+    Assert-FileBytesEqual -Expected $attemptBytes -Path $attemptPath -Message 'Completed-session close should not modify attempt.cpp.'
 
     $visualizationUpdate = Invoke-RepoScript -TargetRepoRoot $fixtureRoot -ScriptRelativePath 'tools/update-visualization.ps1'
     Assert-Equal 0 $visualizationUpdate.ExitCode 'update-visualization should succeed for the fixture.'

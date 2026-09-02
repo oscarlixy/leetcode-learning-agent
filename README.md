@@ -28,17 +28,17 @@
 
 1. 代理先读 `learner/state.json` 和 `learner/active-session.json`，判断是继续旧会话、做应复习内容，还是开启新学习。
 2. 如果需要新题目，会用 `tools/new-problem.ps1` 建立工作区，并保留模板化的 `attempt.cpp`。
-3. 学习过程中的阶段变化和提示升级会先写入候选 JSON，再用 `tools/update-state.ps1` 原子更新。
-4. 学完后会安排下一次复习日期，并更新学习路径可视化。
+3. 学习过程中的阶段变化和提示升级会先写入候选 JSON，再用 `tools/update-state.ps1` 原子更新；题目尝试次数、状态、时间和最高提示级别则用 `tools/update-problem.ps1` 原子更新。
+4. 学完后会安排下一次复习日期，把活动会话关闭为 `active: false`，并更新学习路径可视化。
 5. 如果本机有编译器，再运行 C++ 测试；没有的话测试会返回 `SKIPPED`，学习流程仍可继续。
 
 ## 五级提示
 
-- `L1`：只给方向，不给关键做法。
-- `L2`：指出可以观察的变量、结构或不变量。
-- `L3`：把解题思路拆成更具体的步骤。
-- `L4`：几乎完整的方法，但仍保留最后的实现空间。
-- `L5`：只有在你明确确认后才会解锁完整答案，并允许参考解出现。
+- `L1`：重述关键约束、指出遗漏边界或请你手工模拟，但不暗示具体算法模板。
+- `L2`：指向相关知识，请你观察输入结构或操作顺序，但不给关键状态、核心数据结构或完整步骤。
+- `L3`：给出关键不变量、状态定义或核心数据结构，但不给完整伪代码或代码。
+- `L4`：给出伪代码骨架、关键循环结构和验证点，但不给可提交的完整实现。
+- `L5`：只有在你明确确认后才会给出完整推导、参考实现、替代方案和复杂度分析，而且不会覆盖原始尝试。
 
 如果你想逐级升级，直接说“`给我下一级提示`”即可。
 
@@ -48,12 +48,14 @@
 pwsh -NoProfile -File tools/check.ps1
 pwsh -NoProfile -File tools/doctor.ps1
 pwsh -NoProfile -File tools/test-cpp.ps1 -ProblemPath tests/fixtures/cpp/pass
+pwsh -NoProfile -File tools/update-problem.ps1 -ProblemPath $ProblemPath -CandidatePath "$ProblemPath/meta.candidate.json"
 pwsh -NoProfile -File tools/update-visualization.ps1
 ```
 
 - `check.ps1`：检查路线图、学习状态、题目元数据和可视化是否一致。
 - `doctor.ps1`：检查本机是否能本地编译运行 C++。
 - `test-cpp.ps1`：对某个题目目录执行编译和运行测试。
+- `update-problem.ps1`：校验候选题目元数据并原子更新 `meta.json`，不会改动 `attempt.cpp`。
 - `update-visualization.ps1`：重新生成 `visualization/learning-path.html`。
 
 ## 安装 C++ 编译器后的验证

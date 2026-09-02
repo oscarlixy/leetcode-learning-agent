@@ -1,2 +1,5 @@
 .worktrees/
 .superpowers/
+*.candidate.json
+problems/*/.build/
+tests/fixtures/cpp/*/.build/

@@ -20,6 +20,16 @@ After every hint, ask for a new learner attempt before offering another level.
 - Do not jump to L5 because the learner sounds frustrated.
 - Do not create `reference.cpp` until that explicit confirmation has been given and the session records `hint_level` 5.
 
+## L5 Persistence Transaction
+
+After explicit learner confirmation, complete these steps in order:
+
+1. Set active-session `hint_level` to 5 and save it with `pwsh -NoProfile -File tools/update-state.ps1 -Kind active-session -CandidatePath learner/active-session.candidate.json`.
+2. Set the exact workspace's problem `highest_hint_level_used` to 5. Also update honest lifecycle fields (`attempt_count`, problem `status`, and `last_attempted_at`) when an attempt occurred, then validate and atomically save with `pwsh -NoProfile -File tools/update-problem.ps1 -ProblemPath $ProblemPath -CandidatePath "$ProblemPath/meta.candidate.json"`.
+3. Only then create `reference.cpp`, leaving `attempt.cpp` byte-for-byte learner-owned, and run `pwsh -NoProfile -File tools/check.ps1`.
+
+If either save fails, do not create `reference.cpp`. Repair the candidate and retry the same ordered transaction; never weaken the explicit learner-confirmation gate.
+
 ## File Boundaries
 
 - `attempt.cpp` cannot be overwritten or replaced by the coach.

@@ -17,7 +17,7 @@ try {
     $resolvedRepoRoot = if ($PSBoundParameters.ContainsKey('RepoRoot')) {
         (Resolve-Path -LiteralPath $RepoRoot).Path
     } else {
-        (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+        (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
     }
 
     Import-Module (Join-Path $resolvedRepoRoot 'tools/lib/Validation.psm1') -Force
