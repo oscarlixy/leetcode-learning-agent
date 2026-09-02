@@ -38,6 +38,21 @@ try {
     Assert-True ($html -match 'dynamic-programming') 'Roadmap nodes were not embedded.'
     Assert-True ($html -match '"roadmap"') 'Embedded roadmap root is missing.'
     Assert-True ($html -match '"state"') 'Embedded state root is missing.'
+    Assert-True ($html -match "button\.type = 'button'") 'Topic nodes must remain native buttons.'
+    Assert-True ($html -match "addEventListener\('keydown', \(event\) =>") 'Topic nodes must add a keydown handler for arrow-key focus navigation.'
+    foreach ($arrowKey in @('ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft')) {
+        Assert-True ($html -match [regex]::Escape("'" + $arrowKey + "'")) "Keyboard navigation must handle [$arrowKey]."
+    }
+    Assert-True ($html -match [regex]::Escape("'Enter'")) 'Keyboard navigation must explicitly support Enter activation.'
+    Assert-True ($html -match [regex]::Escape("' '")) 'Keyboard navigation must explicitly support Space activation.'
+    Assert-True ($html -match 'setSelectedNode\(node\)') 'Keyboard navigation must activate the current node through setSelectedNode(node).'
+    Assert-True ($html -match '\.focus\(\)') 'Keyboard navigation must move focus to another node.'
+    Assert-True ($html -match 'Math\.max') 'Keyboard navigation must clamp focus movement at the start boundary.'
+    Assert-True ($html -match 'Math\.min') 'Keyboard navigation must clamp focus movement at the end boundary.'
+    Assert-True (-not ($html -match 'tabindex=')) 'Generated visualization must not set a custom tabindex attribute.'
+    Assert-True (-not ($html -match '\.tabIndex\s*=')) 'Generated visualization must not set a custom tabIndex property.'
+    Assert-True (-not ($html -match "setAttribute\('tabindex'")) 'Generated visualization must not set a custom tabindex via setAttribute.'
+    Assert-True (-not ($html -match [regex]::Escape("'Tab'"))) 'Generated visualization must not intercept the Tab key.'
 
     $state = & $ReadJsonDocument (Join-Path $testRoot 'learner/state.json')
     $state.topics.diagnosis.mastery = 1
