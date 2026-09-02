@@ -180,6 +180,34 @@ finally {
     }
 }
 
+$equivalentCreatedAtRoot = New-ProblemMetadataFixture
+try {
+    $problemRoot = Join-Path $equivalentCreatedAtRoot 'problems/1-two-sum'
+    $metaPath = Join-Path $problemRoot 'meta.json'
+    $metaCandidatePath = Join-Path $problemRoot 'meta.candidate.json'
+
+    $currentMeta = Read-JsonDocument $metaPath
+    $currentMeta.created_at = '2026-09-02T09:00:00.6000000+08:00'
+    Write-TestJson -Path $metaPath -Document $currentMeta
+
+    $equivalentCandidate = Read-JsonDocument $metaPath
+    $equivalentCandidate.created_at = '2026-09-02T09:00:00.6+08:00'
+    Write-TestJson -Path $metaCandidatePath -Document $equivalentCandidate
+
+    [void](Save-ProblemMetadata `
+        -ProblemPath 'problems/1-two-sum' `
+        -CandidatePath 'problems/1-two-sum/meta.candidate.json' `
+        -RepoRoot $equivalentCreatedAtRoot)
+
+    $savedMeta = Read-JsonDocument $metaPath
+    Assert-Equal '2026-09-02T09:00:00.6+08:00' $savedMeta.created_at 'Equivalent ISO 8601 created_at representations should not count as an identity change.'
+}
+finally {
+    if (Test-Path -LiteralPath $equivalentCreatedAtRoot) {
+        Remove-Item -LiteralPath $equivalentCreatedAtRoot -Recurse -Force
+    }
+}
+
 $hintPolicy = Get-Content -LiteralPath (Join-Path $RepoRoot '.agents/skills/leetcode-coach/references/hint-policy.md') -Raw -Encoding utf8
 Assert-True ($hintPolicy -match '(?i)explicit learner confirmation') 'The explicit learner-confirmation gate must remain in the L5 policy.'
 Assert-True ($hintPolicy -match '(?is)hint_level.{0,100}5.{0,300}update-state\.ps1.{0,500}update-problem\.ps1.{0,500}(only then|after).{0,120}reference\.cpp') 'L5 policy must order active-session save, metadata save, then reference.cpp creation.'

@@ -136,7 +136,7 @@ try {
         '-ProblemPath', 'problems/1-two-sum',
         '-CandidatePath', 'problems/1-two-sum/meta.candidate.json'
     )
-    Assert-Equal 0 $metaUpdate.ExitCode 'Saving synchronized problem metadata should succeed.'
+    Assert-Equal 0 $metaUpdate.ExitCode "Saving synchronized problem metadata should succeed. Output=[$($metaUpdate.Output)]"
     Assert-True ($metaUpdate.Output -match '^UPDATED problem metadata problems/1-two-sum$') "Problem metadata output mismatch. Output=[$($metaUpdate.Output)]"
     Assert-FileBytesEqual -Expected $attemptBytes -Path $attemptPath -Message 'Problem metadata update should not modify attempt.cpp.'
     Assert-FileAbsent -Path $referencePath -Message 'reference.cpp should remain absent after metadata updates below L5.'

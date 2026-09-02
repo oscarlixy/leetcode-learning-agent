@@ -193,7 +193,19 @@ function Assert-ProblemMetadataTransition {
     foreach ($identityField in @('problem_id', 'slug', 'created_at')) {
         $currentValue = Get-ExactJsonPropertyValue -Document $CurrentDocument -PropertyName $identityField
         $candidateValue = Get-ExactJsonPropertyValue -Document $CandidateDocument -PropertyName $identityField
-        $unchanged = if ($currentValue -is [string] -and $candidateValue -is [string]) {
+        $unchanged = if ($identityField -eq 'created_at') {
+            $currentTimestamp = [datetimeoffset]::Parse(
+                $currentValue,
+                [System.Globalization.CultureInfo]::InvariantCulture,
+                [System.Globalization.DateTimeStyles]::RoundtripKind
+            )
+            $candidateTimestamp = [datetimeoffset]::Parse(
+                $candidateValue,
+                [System.Globalization.CultureInfo]::InvariantCulture,
+                [System.Globalization.DateTimeStyles]::RoundtripKind
+            )
+            $currentTimestamp.Equals($candidateTimestamp)
+        } elseif ($currentValue -is [string] -and $candidateValue -is [string]) {
             [string]::Equals($currentValue, $candidateValue, [System.StringComparison]::Ordinal)
         } else {
             $currentValue.GetType() -eq $candidateValue.GetType() -and $currentValue.Equals($candidateValue)
