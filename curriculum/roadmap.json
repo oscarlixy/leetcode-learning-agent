@@ -1,0 +1,282 @@
+{
+  "schema_version": 1,
+  "nodes": [
+    {
+      "id": "diagnosis",
+      "title": "Diagnosis",
+      "stage": "foundation",
+      "objectives": [
+        "Calibrate STL reading, tracing, and basic complexity"
+      ],
+      "completion_criteria": [
+        "Explain common STL operations and trace a simple loop"
+      ],
+      "prerequisites": [],
+      "recommended_problems": [
+        "local:cpp-reading",
+        "local:loop-tracing"
+      ]
+    },
+    {
+      "id": "complexity",
+      "title": "Complexity",
+      "stage": "foundation",
+      "objectives": [
+        "Relate input size to operations and extra storage"
+      ],
+      "completion_criteria": [
+        "Derive time/space complexity and identify the bottleneck"
+      ],
+      "prerequisites": [
+        "diagnosis"
+      ],
+      "recommended_problems": [
+        "local:complexity-table",
+        "local:nested-loop-analysis"
+      ]
+    },
+    {
+      "id": "cpp-toolbox",
+      "title": "C++ Toolbox",
+      "stage": "foundation",
+      "objectives": [
+        "Use core C++ containers and avoid lifetime hazards"
+      ],
+      "completion_criteria": [
+        "Select a fitting STL container and explain iterator/overflow risks"
+      ],
+      "prerequisites": [
+        "diagnosis"
+      ],
+      "recommended_problems": [
+        "local:stl-container-choice",
+        "local:iterator-safety"
+      ]
+    },
+    {
+      "id": "arrays-strings",
+      "title": "Arrays and Strings",
+      "stage": "linear-structures",
+      "objectives": [
+        "Learn traversal, two pointers, windows, and prefix information"
+      ],
+      "completion_criteria": [
+        "State a loop invariant and handle empty/singleton boundaries"
+      ],
+      "prerequisites": [
+        "complexity",
+        "cpp-toolbox"
+      ],
+      "recommended_problems": [
+        "26:remove-duplicates-from-sorted-array",
+        "344:reverse-string"
+      ]
+    },
+    {
+      "id": "linked-list",
+      "title": "Linked List",
+      "stage": "linear-structures",
+      "objectives": [
+        "Learn pointer rewiring, sentinels, and fast/slow pointers"
+      ],
+      "completion_criteria": [
+        "Draw pointer changes and handle empty/head/tail cases"
+      ],
+      "prerequisites": [
+        "complexity",
+        "cpp-toolbox"
+      ],
+      "recommended_problems": [
+        "206:reverse-linked-list",
+        "141:linked-list-cycle"
+      ]
+    },
+    {
+      "id": "stack-queue",
+      "title": "Stack and Queue",
+      "stage": "linear-structures",
+      "objectives": [
+        "Connect restricted order to parsing and traversal"
+      ],
+      "completion_criteria": [
+        "Explain why LIFO or FIFO matches the problem"
+      ],
+      "prerequisites": [
+        "complexity",
+        "cpp-toolbox"
+      ],
+      "recommended_problems": [
+        "20:valid-parentheses",
+        "232:implement-queue-using-stacks"
+      ]
+    },
+    {
+      "id": "hash-table",
+      "title": "Hash Table",
+      "stage": "linear-structures",
+      "objectives": [
+        "Trade space for lookup, counting, and deduplication"
+      ],
+      "completion_criteria": [
+        "Explain the meaning of each key/value and the space cost"
+      ],
+      "prerequisites": [
+        "complexity",
+        "cpp-toolbox"
+      ],
+      "recommended_problems": [
+        "1:two-sum",
+        "242:valid-anagram"
+      ]
+    },
+    {
+      "id": "sorting-binary-search",
+      "title": "Sorting and Binary Search",
+      "stage": "sorting-recursion-trees",
+      "objectives": [
+        "Use ordering to reduce search and prove interval updates"
+      ],
+      "completion_criteria": [
+        "Maintain a search-interval invariant without dead loops"
+      ],
+      "prerequisites": [
+        "arrays-strings"
+      ],
+      "recommended_problems": [
+        "704:binary-search",
+        "75:sort-colors"
+      ]
+    },
+    {
+      "id": "recursion-backtracking",
+      "title": "Recursion and Backtracking",
+      "stage": "sorting-recursion-trees",
+      "objectives": [
+        "Model subproblems, choice trees, undo, and pruning"
+      ],
+      "completion_criteria": [
+        "Define base case, state, choice, and rollback"
+      ],
+      "prerequisites": [
+        "complexity",
+        "cpp-toolbox"
+      ],
+      "recommended_problems": [
+        "78:subsets",
+        "46:permutations"
+      ]
+    },
+    {
+      "id": "binary-tree",
+      "title": "Binary Tree",
+      "stage": "sorting-recursion-trees",
+      "objectives": [
+        "Learn traversals and top-down/bottom-up aggregation"
+      ],
+      "completion_criteria": [
+        "Choose traversal order and explain returned subtree information"
+      ],
+      "prerequisites": [
+        "recursion-backtracking"
+      ],
+      "recommended_problems": [
+        "104:maximum-depth-of-binary-tree",
+        "94:binary-tree-inorder-traversal"
+      ]
+    },
+    {
+      "id": "heap-priority-queue",
+      "title": "Heap and Priority Queue",
+      "stage": "sorting-recursion-trees",
+      "objectives": [
+        "Maintain only the currently most important elements"
+      ],
+      "completion_criteria": [
+        "Choose min-heap or max-heap for a Top-K invariant"
+      ],
+      "prerequisites": [
+        "arrays-strings",
+        "hash-table"
+      ],
+      "recommended_problems": [
+        "215:kth-largest-element-in-an-array",
+        "703:kth-largest-element-in-a-stream"
+      ]
+    },
+    {
+      "id": "bfs-dfs",
+      "title": "BFS and DFS",
+      "stage": "graph-composite-search",
+      "objectives": [
+        "Compare level expansion with path exploration"
+      ],
+      "completion_criteria": [
+        "Define state, neighbors, visited rule, and termination"
+      ],
+      "prerequisites": [
+        "stack-queue",
+        "recursion-backtracking"
+      ],
+      "recommended_problems": [
+        "200:number-of-islands",
+        "994:rotting-oranges"
+      ]
+    },
+    {
+      "id": "graph",
+      "title": "Graph",
+      "stage": "graph-composite-search",
+      "objectives": [
+        "Learn adjacency, connectivity, dependencies, and basic paths"
+      ],
+      "completion_criteria": [
+        "Choose a graph representation and traversal from edge properties"
+      ],
+      "prerequisites": [
+        "bfs-dfs"
+      ],
+      "recommended_problems": [
+        "207:course-schedule",
+        "1971:find-if-path-exists-in-graph"
+      ]
+    },
+    {
+      "id": "greedy",
+      "title": "Greedy",
+      "stage": "graph-composite-search",
+      "objectives": [
+        "Justify local choices with invariants or exchange arguments"
+      ],
+      "completion_criteria": [
+        "Explain why the choice cannot discard an optimum"
+      ],
+      "prerequisites": [
+        "arrays-strings",
+        "sorting-binary-search"
+      ],
+      "recommended_problems": [
+        "455:assign-cookies",
+        "55:jump-game"
+      ]
+    },
+    {
+      "id": "dynamic-programming",
+      "title": "Dynamic Programming",
+      "stage": "graph-composite-search",
+      "objectives": [
+        "Derive state and transition from repeated recursion"
+      ],
+      "completion_criteria": [
+        "State semantics, transition, base values, order, and answer location"
+      ],
+      "prerequisites": [
+        "arrays-strings",
+        "recursion-backtracking"
+      ],
+      "recommended_problems": [
+        "70:climbing-stairs",
+        "198:house-robber"
+      ]
+    }
+  ]
+}

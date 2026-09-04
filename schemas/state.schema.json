@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "current_topic_id",
+    "updated_at",
+    "topics"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "current_topic_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "updated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,7})?(?:Z|[+\\-]\\d{2}:\\d{2})$",
+      "format": "date-time"
+    },
+    "topics": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z0-9]+(?:-[a-z0-9]+)*$": {
+          "$ref": "#/$defs/topicState"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "topicState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mastery",
+        "status",
+        "last_studied_at",
+        "next_review_at",
+        "sessions_completed",
+        "best_independent_result",
+        "highest_hint_level_used",
+        "error_tags"
+      ],
+      "properties": {
+        "mastery": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "status": {
+          "enum": [
+            "unseen",
+            "learning",
+            "review",
+            "mastered"
+          ]
+        },
+        "last_studied_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,7})?(?:Z|[+\\-]\\d{2}:\\d{2})$",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "next_review_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "format": "date"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sessions_completed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "best_independent_result": {
+          "type": "boolean"
+        },
+        "highest_hint_level_used": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "error_tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

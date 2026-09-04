@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "source": "__SOURCE__",
+  "problem_id": "__PROBLEM_ID__",
+  "slug": "__SLUG__",
+  "title": "__TITLE__",
+  "url": "__URL__",
+  "difficulty": "__DIFFICULTY__",
+  "primary_topic_id": "__PRIMARY_TOPIC_ID__",
+  "secondary_topic_ids": [],
+  "status": "new",
+  "attempt_count": 0,
+  "highest_hint_level_used": 0,
+  "created_at": "__CREATED_AT__",
+  "last_attempted_at": null
+}

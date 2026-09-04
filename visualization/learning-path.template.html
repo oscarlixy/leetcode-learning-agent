@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learning Path</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f7fb;
+    --panel: #ffffff;
+    --panel-soft: #eef3f8;
+    --text: #17212b;
+    --muted: #536171;
+    --border: #c6d3e0;
+    --accent: #1e5bb8;
+    --accent-soft: #dce8ff;
+    --current: #0f766e;
+    --due: #9a3412;
+    --focus: #0f62fe;
+    --shadow: rgba(23, 33, 43, 0.08);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111827;
+      --panel: #18212f;
+      --panel-soft: #202c3c;
+      --text: #ecf3fb;
+      --muted: #b5c1cf;
+      --border: #334155;
+      --accent: #8db7ff;
+      --accent-soft: rgba(141, 183, 255, 0.18);
+      --current: #5eead4;
+      --due: #fdba74;
+      --focus: #93c5fd;
+      --shadow: rgba(15, 23, 42, 0.45);
+    }
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(180deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 82%, var(--panel) 18%) 100%);
+    color: var(--text);
+  }
+
+  .page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  .hero,
+  .detail-panel,
+  .stage-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px var(--shadow);
+  }
+
+  .hero {
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  .hero h1 {
+    margin: 0 0 8px;
+    font-size: 1.9rem;
+  }
+
+  .hero p,
+  .detail-panel p,
+  .stage-card p,
+  li,
+  button,
+  span,
+  div {
+    overflow-wrap: anywhere;
+  }
+
+  .hero-meta,
+  .legend,
+  .detail-meta,
+  .node-flags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .hero-chip,
+  .legend-item,
+  .detail-chip,
+  .flag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--panel-soft);
+    color: var(--text);
+    font-size: 0.95rem;
+  }
+
+  .legend {
+    margin-top: 16px;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.75fr) minmax(280px, 0.95fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  .stage-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .stage-card {
+    padding: 18px;
+  }
+
+  .stage-card h2 {
+    margin: 0 0 6px;
+    font-size: 1.1rem;
+  }
+
+  .stage-card p {
+    margin: 0 0 16px;
+    color: var(--muted);
+  }
+
+  .node-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .node-button {
+    width: 100%;
+    text-align: left;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--panel-soft);
+    color: var(--text);
+    padding: 14px;
+    cursor: pointer;
+    transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+  }
+
+  .node-button:hover {
+    transform: translateY(-1px);
+    border-color: var(--accent);
+  }
+
+  .node-button:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .node-button[aria-pressed="true"] {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .node-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .node-title {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .node-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+
+  .status-shape {
+    width: 1.35rem;
+    text-align: center;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .flag-chip.current {
+    border-color: color-mix(in srgb, var(--current) 55%, var(--border) 45%);
+    color: var(--current);
+  }
+
+  .flag-chip.due {
+    border-color: color-mix(in srgb, var(--due) 55%, var(--border) 45%);
+    color: var(--due);
+  }
+
+  .detail-panel {
+    padding: 20px;
+    position: sticky;
+    top: 20px;
+  }
+
+  .detail-panel h2 {
+    margin: 0 0 8px;
+    font-size: 1.4rem;
+  }
+
+  .detail-panel h3 {
+    margin: 18px 0 10px;
+    font-size: 1rem;
+  }
+
+  .detail-panel ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+
+  .detail-panel li + li {
+    margin-top: 8px;
+  }
+
+  .detail-summary {
+    margin: 0 0 14px;
+    color: var(--muted);
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+  }
+
+  @media (max-width: 900px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+
+    .detail-panel {
+      position: static;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .page {
+      padding: 16px;
+    }
+
+    .stage-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .hero {
+      padding: 18px;
+    }
+  }
+
+  @media (max-width: 360px) {
+    .page {
+      padding: 12px;
+    }
+
+    .hero,
+    .detail-panel,
+    .stage-card {
+      border-radius: 16px;
+    }
+
+    .node-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+</style>
+</head>
+<body>
+<main class="page" id="learning-path-app" data-input-hash="__LEARNING_PATH_INPUT_HASH__">
+  <section class="hero" aria-labelledby="page-title">
+    <h1 id="page-title">LeetCode Learning Path</h1>
+    <p id="hero-summary">A stage-by-stage roadmap with learner progress, review timing, and the next recommended focus.</p>
+    <div class="hero-meta" id="hero-meta"></div>
+    <div class="legend" aria-label="Status legend" id="status-legend"></div>
+  </section>
+
+  <div class="layout">
+    <section aria-labelledby="stages-title">
+      <h2 class="sr-only" id="stages-title">Learning stages</h2>
+      <div class="stage-grid" id="stage-grid"></div>
+    </section>
+
+    <aside class="detail-panel" aria-labelledby="detail-title">
+      <p class="detail-summary" id="detail-live" aria-live="polite">Select a topic to inspect its prerequisites, objectives, mastery, and recommended problems.</p>
+      <h2 id="detail-title">Topic details</h2>
+      <div class="detail-meta" id="detail-meta"></div>
+
+      <section aria-labelledby="detail-prerequisites-title">
+        <h3 id="detail-prerequisites-title">Prerequisites</h3>
+        <ul id="detail-prerequisites"></ul>
+      </section>
+
+      <section aria-labelledby="detail-objectives-title">
+        <h3 id="detail-objectives-title">Objectives</h3>
+        <ul id="detail-objectives"></ul>
+      </section>
+
+      <section aria-labelledby="detail-criteria-title">
+        <h3 id="detail-criteria-title">Completion criteria</h3>
+        <ul id="detail-criteria"></ul>
+      </section>
+
+      <section aria-labelledby="detail-problems-title">
+        <h3 id="detail-problems-title">Recommended problems</h3>
+        <ul id="detail-problems"></ul>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<script id="learning-path-data" type="application/json">__LEARNING_PATH_DATA_JSON__</script>
+<script>
+(() => {
+  const dataElement = document.getElementById('learning-path-data');
+  const app = document.getElementById('learning-path-app');
+  if (!dataElement || !app) {
+    return;
+  }
+
+  const data = JSON.parse(dataElement.textContent);
+  const stageGrid = document.getElementById('stage-grid');
+  const heroMeta = document.getElementById('hero-meta');
+  const statusLegend = document.getElementById('status-legend');
+  const detailLive = document.getElementById('detail-live');
+  const detailTitle = document.getElementById('detail-title');
+  const detailMeta = document.getElementById('detail-meta');
+  const detailPrerequisites = document.getElementById('detail-prerequisites');
+  const detailObjectives = document.getElementById('detail-objectives');
+  const detailCriteria = document.getElementById('detail-criteria');
+  const detailProblems = document.getElementById('detail-problems');
+
+  const stageConfig = [
+    { id: 'foundation', title: 'Foundation', description: 'Tracing, complexity, and core C++ fluency.' },
+    { id: 'linear-structures', title: 'Linear Structures', description: 'Arrays, linked lists, queues, stacks, and hashing.' },
+    { id: 'sorting-recursion-trees', title: 'Sorting, Recursion, and Trees', description: 'Ordered search, recursion patterns, trees, and heaps.' },
+    { id: 'graph-composite-search', title: 'Graph and Composite Search', description: 'Graph traversal, greedy choices, and dynamic programming.' }
+  ];
+  const statusConfig = {
+    unseen: { label: 'Unseen', shape: '○' },
+    learning: { label: 'Learning', shape: '◔' },
+    review: { label: 'Review', shape: '◇' },
+    mastered: { label: 'Mastered', shape: '■' }
+  };
+  const nodeButtons = new Map();
+  const topics = data.state.topics;
+  const currentTopicId = data.state.current_topic_id;
+  const roadmapNodesById = new Map(data.roadmap.nodes.map((node) => [node.id, node]));
+  const hkToday = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Hong_Kong',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date());
+
+  function createChip(className, pieces) {
+    const chip = document.createElement('span');
+    chip.className = className;
+    pieces.forEach((piece) => {
+      const part = document.createElement('span');
+      part.textContent = piece;
+      chip.appendChild(part);
+    });
+    return chip;
+  }
+
+  function clearChildren(element) {
+    while (element.firstChild) {
+      element.removeChild(element.firstChild);
+    }
+  }
+
+  function appendList(element, values) {
+    clearChildren(element);
+    values.forEach((value) => {
+      const item = document.createElement('li');
+      item.textContent = value;
+      element.appendChild(item);
+    });
+  }
+
+  function getNodeFlags(nodeId, topicState) {
+    const flags = [];
+    if (nodeId === currentTopicId) {
+      flags.push({ className: 'flag-chip current', text: 'Current topic' });
+    }
+    if (topicState.next_review_at && topicState.next_review_at <= hkToday) {
+      flags.push({ className: 'flag-chip due', text: 'Review due' });
+    }
+    return flags;
+  }
+
+  function setSelectedNode(node) {
+    nodeButtons.forEach((button, nodeId) => {
+      button.setAttribute('aria-pressed', String(nodeId === node.id));
+    });
+
+    const topicState = topics[node.id];
+    const status = statusConfig[topicState.status];
+    const nextReview = topicState.next_review_at || 'Not scheduled';
+    const mastery = 'Mastery ' + String(topicState.mastery) + ' of 4';
+
+    detailTitle.textContent = node.title;
+    detailLive.textContent = node.title + ': ' + status.label + ', ' + mastery + '.';
+    clearChildren(detailMeta);
+    detailMeta.appendChild(createChip('detail-chip', [status.shape, status.label]));
+    detailMeta.appendChild(createChip('detail-chip', [mastery]));
+    detailMeta.appendChild(createChip('detail-chip', ['Stage', stageConfig.find((stage) => stage.id === node.stage).title]));
+    detailMeta.appendChild(createChip('detail-chip', ['Next review', nextReview]));
+
+    getNodeFlags(node.id, topicState).forEach((flag) => {
+      detailMeta.appendChild(createChip(flag.className, [flag.text]));
+    });
+
+    const prerequisiteLabels = node.prerequisites.map((prerequisiteId) => {
+      const prerequisite = roadmapNodesById.get(prerequisiteId);
+      return prerequisite ? prerequisite.title + ' (' + prerequisiteId + ')' : prerequisiteId;
+    });
+    appendList(detailPrerequisites, prerequisiteLabels.length > 0 ? prerequisiteLabels : ['None']);
+    appendList(detailObjectives, node.objectives);
+    appendList(detailCriteria, node.completion_criteria);
+    appendList(detailProblems, node.recommended_problems);
+  }
+
+  function moveNodeFocus(button, step) {
+    const orderedButtons = Array.from(nodeButtons.values());
+    const currentIndex = orderedButtons.indexOf(button);
+    if (currentIndex < 0) {
+      return;
+    }
+
+    const nextIndex = Math.min(orderedButtons.length - 1, Math.max(0, currentIndex + step));
+    if (nextIndex !== currentIndex) {
+      orderedButtons[nextIndex].focus();
+    }
+  }
+
+  statusLegend.setAttribute('role', 'list');
+  Object.values(statusConfig).forEach((status) => {
+    const item = document.createElement('span');
+    item.className = 'legend-item';
+    item.setAttribute('role', 'listitem');
+    const shape = document.createElement('span');
+    shape.className = 'status-shape';
+    shape.textContent = status.shape;
+    const label = document.createElement('span');
+    label.textContent = status.label;
+    item.appendChild(shape);
+    item.appendChild(label);
+    statusLegend.appendChild(item);
+  });
+
+  heroMeta.appendChild(createChip('hero-chip', ['Current topic', currentTopicId]));
+  heroMeta.appendChild(createChip('hero-chip', ['Updated', data.state.updated_at]));
+  heroMeta.appendChild(createChip('hero-chip', ['Hong Kong date', hkToday]));
+
+  stageConfig.forEach((stage) => {
+    const section = document.createElement('section');
+    section.className = 'stage-card';
+    section.setAttribute('aria-labelledby', 'stage-' + stage.id);
+
+    const heading = document.createElement('h2');
+    heading.id = 'stage-' + stage.id;
+    heading.textContent = stage.title;
+    section.appendChild(heading);
+
+    const description = document.createElement('p');
+    description.textContent = stage.description;
+    section.appendChild(description);
+
+    const list = document.createElement('div');
+    list.className = 'node-list';
+    section.appendChild(list);
+
+    data.roadmap.nodes.filter((node) => node.stage === stage.id).forEach((node) => {
+      const topicState = topics[node.id];
+      const status = statusConfig[topicState.status];
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'node-button';
+      button.setAttribute('aria-pressed', 'false');
+      button.setAttribute('aria-describedby', 'node-status-' + node.id);
+
+      const topRow = document.createElement('div');
+      topRow.className = 'node-row';
+      button.appendChild(topRow);
+
+      const titleWrap = document.createElement('div');
+      topRow.appendChild(titleWrap);
+
+      const title = document.createElement('span');
+      title.className = 'node-title';
+      title.textContent = node.title;
+      titleWrap.appendChild(title);
+
+      const statusLine = document.createElement('span');
+      statusLine.className = 'node-status';
+      statusLine.id = 'node-status-' + node.id;
+      titleWrap.appendChild(statusLine);
+
+      const statusShape = document.createElement('span');
+      statusShape.className = 'status-shape';
+      statusShape.textContent = status.shape;
+      statusLine.appendChild(statusShape);
+
+      const statusLabel = document.createElement('span');
+      statusLabel.textContent = status.label + ' | Mastery ' + String(topicState.mastery) + '/4';
+      statusLine.appendChild(statusLabel);
+
+      const flagRow = document.createElement('div');
+      flagRow.className = 'node-flags';
+      topRow.appendChild(flagRow);
+
+      getNodeFlags(node.id, topicState).forEach((flag) => {
+        flagRow.appendChild(createChip(flag.className, [flag.text]));
+      });
+
+      button.addEventListener('click', () => setSelectedNode(node));
+      button.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+          event.preventDefault();
+          moveNodeFocus(button, 1);
+          return;
+        }
+        if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+          event.preventDefault();
+          moveNodeFocus(button, -1);
+          return;
+        }
+        if (event.key === 'Enter' || event.key === ' ') {
+          setSelectedNode(node);
+        }
+      });
+      nodeButtons.set(node.id, button);
+      list.appendChild(button);
+    });
+
+    stageGrid.appendChild(section);
+  });
+
+  const initialNode = data.roadmap.nodes.find((node) => node.id === currentTopicId) || data.roadmap.nodes[0];
+  if (initialNode) {
+    setSelectedNode(initialNode);
+  }
+})();
+</script>
+</body>
+</html>

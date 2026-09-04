@@ -1,0 +1,298 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "nodes"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 15,
+      "maxItems": 15,
+      "prefixItems": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/node"
+            },
+            {
+              "properties": {
+                "id": {
+                  "const": "diagnosis"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/node"
+            },
+            {
+              "properties": {
+                "id": {
+                  "const": "complexity"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/node"
+            },
+            {
+              "properties": {
+                "id": {
+                  "const": "cpp-toolbox"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/node"
+            },
+            {
+              "properties": {
+                "id": {
+                  "const": "arrays-strings"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/node"
+            },
+            {
+              "properties": {
+                "id": {
+                  "const": "linked-list"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/node"
+            },
+            {
+              "properties": {
+                "id": {
+                  "const": "stack-queue"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/node"
+            },
+            {
+              "properties": {
+                "id": {
+                  "const": "hash-table"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/node"
+            },
+            {
+              "properties": {
+                "id": {
+                  "const": "sorting-binary-search"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/node"
+            },
+            {
+              "properties": {
+                "id": {
+                  "const": "recursion-backtracking"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/node"
+            },
+            {
+              "properties": {
+                "id": {
+                  "const": "binary-tree"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/node"
+            },
+            {
+              "properties": {
+                "id": {
+                  "const": "heap-priority-queue"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/node"
+            },
+            {
+              "properties": {
+                "id": {
+                  "const": "bfs-dfs"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/node"
+            },
+            {
+              "properties": {
+                "id": {
+                  "const": "graph"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/node"
+            },
+            {
+              "properties": {
+                "id": {
+                  "const": "greedy"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/node"
+            },
+            {
+              "properties": {
+                "id": {
+                  "const": "dynamic-programming"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "items": false
+    }
+  },
+  "$defs": {
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "stage",
+        "objectives",
+        "completion_criteria",
+        "prerequisites",
+        "recommended_problems"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage": {
+          "enum": [
+            "foundation",
+            "linear-structures",
+            "sorting-recursion-trees",
+            "graph-composite-search"
+          ]
+        },
+        "objectives": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "completion_criteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "prerequisites": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        },
+        "recommended_problems": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^(?:local|[0-9]+):[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        }
+      }
+    }
+  }
+}
